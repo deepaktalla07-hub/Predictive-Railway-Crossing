@@ -16,7 +16,7 @@ import {
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) ||
-  'http://localhost:5001/api/v1';
+  '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

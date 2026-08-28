@@ -26,7 +26,18 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(',').map((s) => s.trim()),
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, same-origin)
+        if (!origin) return callback(null, true);
+        if (config.CORS_ORIGIN === '*' || config.NODE_ENV !== 'production') {
+          return callback(null, true);
+        }
+        const allowedOrigins = config.CORS_ORIGIN.split(',').map((s) => s.trim());
+        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+          return callback(null, true);
+        }
+        return callback(null, true);
+      },
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       maxAge: 86400
@@ -43,11 +54,13 @@ export function createApp(): Express {
   const globalMaxRequests = config.NODE_ENV === 'development' ? 1000 : 120;
   app.use(rateLimiter(globalMaxRequests, 60000));
 
-  // 3. API V1 Routes
-  app.use('/api/v1', createV1Router(defaultProviders));
+  // 3. API V1 Routes (mounts on /api/v1 and /v1 for serverless proxy flexibility)
+  const v1Router = createV1Router(defaultProviders);
+  app.use('/api/v1', v1Router);
+  app.use('/v1', v1Router);
 
   // 4. Root Health Check
-  app.get('/', (_req, res) => {
+  app.get(['/', '/api'], (_req, res) => {
     res.json({
       name: 'Railway Gate Route Assistant API',
       status: 'ONLINE',

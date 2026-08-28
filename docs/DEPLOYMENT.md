@@ -7,14 +7,15 @@ This guide provides step-by-step instructions for deploying, configuring, and ve
 ## Table of Contents
 1. [Database Setup (PostgreSQL / Supabase)](#1-database-setup-postgresql--supabase)
 2. [Environment Variables Reference](#2-environment-variables-reference)
-3. [Google Maps Platform Setup](#3-google-maps-platform-setup)
-4. [Railway Data Provider Setup (OpenStreetMap Overpass)](#4-railway-data-provider-setup-openstreetmap-overpass)
-5. [Train Data Provider Setup (RapidAPI / NTES)](#5-train-data-provider-setup-rapidapi--ntes)
-6. [Backend Deployment (Node.js / Docker / PM2)](#6-backend-deployment-nodejs--docker--pm2)
-7. [Frontend Deployment (Static SPA / CDN)](#7-frontend-deployment-static-spa--cdn)
-8. [Domain & SSL/TLS Configuration](#8-domain--ssltls-configuration)
-9. [CORS & Security Configuration](#9-cors--security-configuration)
-10. [Production Health Checks & Smoke Testing](#10-production-health-checks--smoke-testing)
+3. [Vercel Full-Stack Deployment (Recommended)](#3-vercel-full-stack-deployment-recommended)
+4. [Google Maps Platform Setup](#4-google-maps-platform-setup)
+5. [Railway Data Provider Setup (OpenStreetMap Overpass)](#5-railway-data-provider-setup-openstreetmap-overpass)
+6. [Train Data Provider Setup (RapidAPI / NTES)](#6-train-data-provider-setup-rapidapi--ntes)
+7. [Alternative: Backend Deployment (Node.js / Docker / PM2)](#7-alternative-backend-deployment-nodejs--docker--pm2)
+8. [Alternative: Frontend Deployment (Static SPA / Nginx)](#8-alternative-frontend-deployment-static-spa--nginx)
+9. [Domain & SSL/TLS Configuration](#9-domain--ssltls-configuration)
+10. [CORS & Security Configuration](#10-cors--security-configuration)
+11. [Production Health Checks & Smoke Testing](#11-production-health-checks--smoke-testing)
 
 ---
 
@@ -90,7 +91,58 @@ VITE_GOOGLE_MAPS_API_KEY=your_restricted_frontend_browser_key
 
 ---
 
-## 3. Google Maps Platform Setup
+## 3. Vercel Full-Stack Deployment (Recommended)
+
+The easiest and fastest way to deploy the entire application is via **Vercel**. 
+The repository is pre-configured with `vercel.json` and a Serverless Function handler at `api/index.ts` to host both the React SPA frontend and the Express backend API on a single domain with zero server maintenance.
+
+### Option A: Deploy via Vercel CLI (Fastest)
+
+1. **Deploy using Vercel CLI**:
+   ```bash
+   npx vercel
+   ```
+2. **Follow the interactive prompts**:
+   - Set up and deploy? **Yes (`Y`)**
+   - Which scope? Select your Vercel account or team.
+   - Link to existing project? **No (`N`)**
+   - What's your project's name? `railway-gate-route-assistant` (or your choice)
+   - In which directory is your code located? `./`
+   - Want to modify settings? **No (`N`)** (Vercel automatically detects `vercel.json`)
+
+3. **Deploy to Production**:
+   ```bash
+   npx vercel --prod
+   ```
+
+### Option B: Deploy via GitHub & Vercel Dashboard
+
+1. Push your repository to GitHub:
+   ```bash
+   git push origin main
+   ```
+2. Go to [vercel.com/new](https://vercel.com/new).
+3. Import your GitHub repository.
+4. **Configure Project Settings**:
+   - **Framework Preset**: *Vite* or *Other* (detected automatically via `vercel.json`)
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `frontend/dist`
+5. **Add Production Environment Variables**:
+   In the Vercel Project Dashboard under **Settings $\to$ Environment Variables**, configure:
+   - `NODE_ENV`: `production`
+   - `ROUTING_PROVIDER`: `OSRM` (or `DEV_STUB` / `GOOGLE`)
+   - `RAILWAY_CROSSING_PROVIDER`: `OSM_OVERPASS` (or `DEV_STUB`)
+   - `TRAIN_SCHEDULE_PROVIDER`: `RAPIDAPI_LIVE` (or `LOCAL_BASELINE`)
+   - `OSRM_BASE_URL`: `https://router.project-osrm.org`
+   - `OSM_OVERPASS_URL`: `https://overpass.kumi.systems/api/interpreter`
+   - `RAPIDAPI_KEY`: *(Optional: your RapidAPI key for real-time NTES/IRCTC train tracking)*
+   - `DATABASE_URL`: *(Optional: your Supabase / PostgreSQL connection string)*
+   - `VITE_GOOGLE_MAPS_API_KEY`: *(Optional: if using Google Maps instead of OpenStreetMap)*
+6. Click **Deploy**.
+
+---
+
+## 4. Google Maps Platform Setup
 
 If enabling Google Maps for the frontend interactive map and Places Autocomplete:
 
@@ -103,14 +155,14 @@ If enabling Google Maps for the frontend interactive map and Places Autocomplete
    - Under **Credentials**, create an API key.
 4. **Set Application Restrictions**:
    - Select **Website restrictions (HTTP referrers)**.
-   - Add your production domain: `https://railroute.example.com/*` and `https://*.railroute.example.com/*`.
+   - Add your production domain: `https://railroute.example.com/*` and `https://*.railroute.example.com/*` (or `https://*.vercel.app/*`).
 5. **Set API Restrictions**:
    - Restrict key to only Maps JavaScript API and Places API.
 6. **Graceful Fallback**: If `VITE_GOOGLE_MAPS_API_KEY` is not provided, the application seamlessly defaults to **OpenStreetMap** with Leaflet tiles.
 
 ---
 
-## 4. Railway Data Provider Setup (OpenStreetMap Overpass)
+## 5. Railway Data Provider Setup (OpenStreetMap Overpass)
 
 1. **Provider**: `OverpassCrossingProvider` connects to OpenStreetMap Overpass API nodes tagged `railway=level_crossing`.
 2. **Configuration**: Set `OSM_OVERPASS_URL=https://overpass.kumi.systems/api/interpreter` (or your private Overpass instance).
@@ -120,7 +172,7 @@ If enabling Google Maps for the frontend interactive map and Places Autocomplete
 
 ---
 
-## 5. Train Data Provider Setup (RapidAPI / NTES)
+## 6. Train Data Provider Setup (RapidAPI / NTES)
 
 1. **Provider Subscription**:
    - Subscribe to the IRCTC Live Train Status API on [RapidAPI](https://rapidapi.com).
@@ -133,7 +185,7 @@ If enabling Google Maps for the frontend interactive map and Places Autocomplete
 
 ---
 
-## 6. Backend Deployment (Node.js / Docker / PM2)
+## 7. Alternative: Backend Deployment (Node.js / Docker / PM2)
 
 ### Option A: Direct Node.js / PM2 Process Manager
 ```bash
@@ -175,7 +227,7 @@ CMD ["node", "dist/index.js"]
 
 ---
 
-## 7. Frontend Deployment (Static SPA / CDN)
+## 8. Alternative: Frontend Deployment (Static SPA / Nginx)
 
 The frontend is a static Single Page Application (SPA).
 
