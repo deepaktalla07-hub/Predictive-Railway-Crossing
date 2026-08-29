@@ -170,23 +170,27 @@ export const PlacesAutocompleteInput: React.FC<PlacesAutocompleteInputProps> = (
         </div>
       </div>
 
-      {/* Autocomplete Suggestions Dropdown */}
+      {/* Autocomplete Suggestions Dropdown - Fully Opaque */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-800/80 text-xs">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-[100] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800 text-xs">
           {suggestions.map((item, idx) => (
             <div
               key={item.placeId}
               onClick={() => handleSelectSuggestion(item)}
               onMouseEnter={() => setSelectedIndex(idx)}
-              className={`p-2.5 cursor-pointer flex items-center gap-2.5 transition-colors ${
-                selectedIndex === idx ? 'bg-blue-600/20 text-white' : 'hover:bg-slate-800/80 text-slate-300'
+              className={`p-3 cursor-pointer flex items-center gap-2.5 transition-colors bg-slate-900 ${
+                selectedIndex === idx ? '!bg-blue-600 text-white' : 'hover:!bg-slate-800 text-slate-200'
               }`}
             >
-              <Search className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+              <Search className={`w-3.5 h-3.5 flex-shrink-0 ${selectedIndex === idx ? 'text-white' : 'text-slate-400'}`} />
               <div className="flex flex-col truncate">
-                <span className="font-semibold text-slate-100 truncate">{item.mainText}</span>
+                <span className={`font-bold truncate ${selectedIndex === idx ? 'text-white' : 'text-slate-100'}`}>
+                  {item.mainText}
+                </span>
                 {item.secondaryText && (
-                  <span className="text-[10px] text-slate-500 truncate">{item.secondaryText}</span>
+                  <span className={`text-[11px] truncate ${selectedIndex === idx ? 'text-blue-100' : 'text-slate-400'}`}>
+                    {item.secondaryText}
+                  </span>
                 )}
               </div>
             </div>
