@@ -48,7 +48,13 @@ export class LeafletMapAdapter implements IMapAdapter {
 
     this.map = L.map(container, {
       center: [options.center.lat, options.center.lng],
-      zoom: options.zoom,
+      zoom: options.zoom || 13,
+      minZoom: 3,
+      maxZoom: 19,
+      zoomDelta: 1,
+      zoomSnap: 1,
+      wheelPxPerZoomLevel: 60,
+      wheelDebounceTime: 40,
       zoomControl: false,
       attributionControl: false,
       dragging: true,
@@ -80,6 +86,7 @@ export class LeafletMapAdapter implements IMapAdapter {
     // Default base layer (Streets)
     this.baseTileLayer = L.tileLayer(TILE_LAYERS.streets.url, {
       attribution: TILE_LAYERS.streets.attribution,
+      minZoom: 3,
       maxZoom: TILE_LAYERS.streets.maxZoom
     }).addTo(this.map);
 
@@ -93,14 +100,18 @@ export class LeafletMapAdapter implements IMapAdapter {
   }
 
   public zoomIn(): void {
-    if (this.map) {
-      this.map.zoomIn();
+    if (!this.map) return;
+    const current = this.map.getZoom();
+    if (current < 19) {
+      this.map.setZoom(current + 1, { animate: true });
     }
   }
 
   public zoomOut(): void {
-    if (this.map) {
-      this.map.zoomOut();
+    if (!this.map) return;
+    const current = this.map.getZoom();
+    if (current > 3) {
+      this.map.setZoom(current - 1, { animate: true });
     }
   }
 
