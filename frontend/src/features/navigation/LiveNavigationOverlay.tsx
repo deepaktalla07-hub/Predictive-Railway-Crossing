@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useGeolocation } from '../../hooks/useGeolocation';
 import { formatDistance, formatDuration, formatClockTime } from '../../utils/formatters';
 import { Coordinate, CrossingRiskDetail, RiskLevel } from '@railway-gate/shared';
 import {
@@ -17,7 +18,9 @@ import {
   Train,
   CheckCircle,
   LocateFixed,
-  Car
+  Car,
+  Radio,
+  Sparkles
 } from 'lucide-react';
 
 function haversineMeters(c1: Coordinate, c2: Coordinate): number {
@@ -51,6 +54,10 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     vehicleCoord
   } = useAppStore();
 
+  const { gpsData, startWatching, stopWatching } = useGeolocation();
+
+  // Navigation Tracking Mode: 'GPS' (Real phone movement) vs 'SIMULATION' (Demo auto drive)
+  const [navMode, setNavMode] = useState<'GPS' | 'SIMULATION'>('GPS');
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -62,7 +69,6 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     analysisResult?.primaryRoute;
 
   const rawCoordinates = activeRoute?.polylineGeoJSON?.coordinates || [];
-  // Convert [lng, lat] to Coordinate[]
   const routePoints: Coordinate[] = rawCoordinates.map(([lng, lat]) => ({ lat, lng }));
   const totalDistance = activeRoute?.distanceMeters || 10000;
   const totalDuration = activeRoute?.durationSeconds || 900;
@@ -70,8 +76,79 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
 
   const animFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(Date.now());
+  const prevGpsCoordRef = useRef<Coordinate | null>(null);
 
-  // Calculate vehicle position along route based on progress (0 to 1)
+  // Start continuous high-accuracy Phone GPS tracking on mount
+  useEffect(() => {
+    startWatching();
+    return () => {
+      stopWatching();
+    };
+  }, [startWatching, stopWatching]);
+
+  // Handle Real Phone GPS Movement Updates
+  useEffect(() => {
+    if (navMode !== 'GPS' || !gpsData) return;
+
+    const currentCoord = gpsData.coordinate;
+
+    // Calculate heading from GPS or previous fix
+    let heading = gpsData.heading || 0;
+    if (prevGpsCoordRef.current && (gpsData.heading === null || gpsData.heading === 0)) {
+      const p1 = prevGpsCoordRef.current;
+      const p2 = currentCoord;
+      const y = Math.sin((p2.lng - p1.lng) * (Math.PI / 180)) * Math.cos(p2.lat * (Math.PI / 180));
+      const x =
+        Math.cos(p1.lat * (Math.PI / 180)) * Math.sin(p2.lat * (Math.PI / 180)) -
+        Math.sin(p1.lat * (Math.PI / 180)) *
+          Math.cos(p2.lat * (Math.PI / 180)) *
+          Math.cos((p2.lng - p1.lng) * (Math.PI / 180));
+      heading = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+    }
+    prevGpsCoordRef.current = currentCoord;
+
+    // Calculate remaining distance to destination
+    const destCoord = routePoints[routePoints.length - 1] || currentCoord;
+    const remainingDist = Math.round(haversineMeters(currentCoord, destCoord));
+    const speed = gpsData.speedKmh || 40;
+    const remainingDur = Math.max(0, Math.round((remainingDist / (speed * 1000)) * 3600));
+
+    // Find next upcoming railway crossing
+    const { crossing: nextCross, distanceMeters: distToNextCross } =
+      getNextUpcomingCrossingForCoord(currentCoord);
+
+    if (remainingDist < 50) {
+      setHasReachedDestination(true);
+    }
+
+    updateNavTelemetry({
+      progress: Math.min(1, Math.max(0, 1 - remainingDist / totalDistance)),
+      coord: currentCoord,
+      heading,
+      speedKmh: speed,
+      remainingDistance: remainingDist,
+      remainingDuration: remainingDur,
+      nextCrossing: nextCross,
+      distanceToNextCrossing: distToNextCross
+    });
+
+    onVehicleMove?.(currentCoord, heading);
+  }, [gpsData, navMode, totalDistance]);
+
+  // Find next upcoming crossing relative to current coordinate
+  const getNextUpcomingCrossingForCoord = (currentCoord: Coordinate) => {
+    if (crossings.length === 0) return { crossing: null, distanceMeters: null };
+
+    // Sort crossings by distance from phone
+    const sorted = [...crossings].map((c) => ({
+      crossing: c,
+      dist: Math.round(haversineMeters(currentCoord, c.location))
+    })).sort((a, b) => a.dist - b.dist);
+
+    return { crossing: sorted[0].crossing, distanceMeters: sorted[0].dist };
+  };
+
+  // Calculate vehicle position along route based on progress (for simulation)
   const getInterpolatedPosition = (t: number) => {
     if (routePoints.length < 2) return { coord: routePoints[0] || { lat: 0, lng: 0 }, heading: 0, index: 0 };
     const totalSegments = routePoints.length - 1;
@@ -85,7 +162,6 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     const lat = p1.lat + (p2.lat - p1.lat) * segmentT;
     const lng = p1.lng + (p2.lng - p1.lng) * segmentT;
 
-    // Calculate heading (bearing) angle in degrees
     const y = Math.sin((p2.lng - p1.lng) * (Math.PI / 180)) * Math.cos(p2.lat * (Math.PI / 180));
     const x =
       Math.cos(p1.lat * (Math.PI / 180)) * Math.sin(p2.lat * (Math.PI / 180)) -
@@ -97,26 +173,9 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     return { coord: { lat, lng }, heading, index };
   };
 
-  // Find next upcoming railway crossing ahead of current vehicle position
-  const getNextUpcomingCrossing = (currentCoord: Coordinate, currentProg: number) => {
-    const remainingCrossings = crossings.filter((c) => {
-      // Find approximate progress of crossing along route
-      return c.distanceFromRouteStartMeters >= currentProg * totalDistance - 50;
-    });
-
-    if (remainingCrossings.length === 0) return { crossing: null, distanceMeters: null };
-
-    const next = remainingCrossings[0];
-    const distMeters = Math.max(
-      0,
-      Math.round(haversineMeters(currentCoord, next.location))
-    );
-    return { crossing: next, distanceMeters: distMeters };
-  };
-
-  // Animation Loop for Smooth Live Vehicle Movement
+  // Simulation Animation Loop (Only active when navMode === 'SIMULATION')
   useEffect(() => {
-    if (!isPlaying || hasReachedDestination || routePoints.length < 2) return;
+    if (navMode !== 'SIMULATION' || !isPlaying || hasReachedDestination || routePoints.length < 2) return;
 
     lastTimeRef.current = Date.now();
 
@@ -125,8 +184,7 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
       const deltaSec = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
 
-      // Realistic speed: base duration adjusted by playbackSpeed
-      const simDurationSec = Math.max(25, totalDuration / 20); // Compressed for live smooth driving preview
+      const simDurationSec = Math.max(25, totalDuration / 20);
       const step = (deltaSec / simDurationSec) * playbackSpeed;
 
       setProgress((prev) => {
@@ -148,16 +206,18 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [isPlaying, playbackSpeed, hasReachedDestination, totalDuration, routePoints.length]);
+  }, [navMode, isPlaying, playbackSpeed, hasReachedDestination, totalDuration, routePoints.length]);
 
-  // Update vehicle position and telemetry on progress changes
+  // Update telemetry during simulation mode
   useEffect(() => {
+    if (navMode !== 'SIMULATION') return;
+
     const { coord, heading } = getInterpolatedPosition(progress);
-    const { crossing: nextCross, distanceMeters: distToNextCross } = getNextUpcomingCrossing(coord, progress);
+    const { crossing: nextCross, distanceMeters: distToNextCross } = getNextUpcomingCrossingForCoord(coord);
 
     const remainingDist = Math.round(totalDistance * (1 - progress));
     const remainingDur = Math.round(totalDuration * (1 - progress));
-    const speed = Math.round(42 + Math.sin(progress * 10) * 8);
+    const speed = Math.round(45 + Math.sin(progress * 8) * 8);
 
     updateNavTelemetry({
       progress,
@@ -171,13 +231,15 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     });
 
     onVehicleMove?.(coord, heading);
-  }, [progress]);
+  }, [progress, navMode]);
 
-  const { coord: currentCoord, heading: currentHeading } = getInterpolatedPosition(progress);
-  const { crossing: nextCrossing, distanceMeters: distToNextCrossing } = getNextUpcomingCrossing(
-    currentCoord,
-    progress
-  );
+  const { coord: currentCoord, heading: currentHeading } =
+    navMode === 'GPS' && gpsData
+      ? { coord: gpsData.coordinate, heading: gpsData.heading || 0 }
+      : getInterpolatedPosition(progress);
+
+  const { crossing: nextCrossing, distanceMeters: distToNextCrossing } =
+    getNextUpcomingCrossingForCoord(currentCoord);
 
   const remainingDist = Math.round(totalDistance * (1 - progress));
   const remainingDur = Math.round(totalDuration * (1 - progress));
@@ -327,28 +389,55 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
             />
           </div>
 
-          {/* Actions & Simulation Controls Row */}
+          {/* Tracking Mode Pill & Actions Row */}
           <div className="flex items-center justify-between pt-1 border-t border-slate-800">
-            {/* Simulation Controls: Play/Pause, 1x/2x */}
+            {/* Mode Switcher: GPS vs Simulation */}
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setIsPlaying(!isPlaying)}
-                title={isPlaying ? 'Pause Simulation' : 'Resume Navigation'}
-                className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 transition-colors cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-emerald-400" />}
-              </button>
+              {navMode === 'GPS' ? (
+                <div className="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-bold">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Phone GPS ({gpsData?.speedKmh ?? 0} km/h)</span>
+                  <button
+                    type="button"
+                    onClick={() => setNavMode('SIMULATION')}
+                    title="Switch to Demo Simulation"
+                    className="ml-1 text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                  >
+                    Simulate
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    title={isPlaying ? 'Pause Simulation' : 'Resume Navigation'}
+                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 transition-colors cursor-pointer"
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-emerald-400" />}
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setPlaybackSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-                title="Simulation Speed"
-                className="px-2.5 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 text-xs font-bold text-cyan-400 transition-colors cursor-pointer"
-              >
-                <FastForward className="w-3.5 h-3.5" />
-                <span>{playbackSpeed}x</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlaybackSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
+                    title="Simulation Speed"
+                    className="px-2.5 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 text-xs font-bold text-cyan-400 transition-colors cursor-pointer"
+                  >
+                    <FastForward className="w-3.5 h-3.5" />
+                    <span>{playbackSpeed}x</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNavMode('GPS')}
+                    title="Switch to Live Phone GPS"
+                    className="px-2 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 text-[10px] font-bold text-emerald-400 transition-colors cursor-pointer"
+                  >
+                    <Radio className="w-3 h-3" />
+                    <span>Use GPS</span>
+                  </button>
+                </div>
+              )}
 
               {/* Re-center Camera on Car */}
               <button
