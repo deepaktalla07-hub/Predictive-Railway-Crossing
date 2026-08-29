@@ -86,36 +86,51 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
     };
   }, [startWatching, stopWatching]);
 
-  // Handle Real Phone GPS Movement Updates
+  // Handle Real Phone GPS Movement Updates with Route Snapping
   useEffect(() => {
-    if (navMode !== 'GPS' || !gpsData) return;
+    if (navMode !== 'GPS' || !gpsData || routePoints.length === 0) return;
 
     const currentCoord = gpsData.coordinate;
+    const originCoord = routePoints[0];
+    const destCoord = routePoints[routePoints.length - 1];
 
-    // Calculate heading from GPS or previous fix
+    // Check if phone GPS is reasonably close to the route corridor (< 5 km)
+    const distToOrigin = haversineMeters(currentCoord, originCoord);
+    const distToDest = haversineMeters(currentCoord, destCoord);
+    const isNearbyRoute = distToOrigin < 5000 || distToDest < totalDistance + 5000;
+
+    let activeNavCoord = currentCoord;
     let heading = gpsData.heading || 0;
-    if (prevGpsCoordRef.current && (gpsData.heading === null || gpsData.heading === 0)) {
-      const p1 = prevGpsCoordRef.current;
-      const p2 = currentCoord;
-      const y = Math.sin((p2.lng - p1.lng) * (Math.PI / 180)) * Math.cos(p2.lat * (Math.PI / 180));
-      const x =
-        Math.cos(p1.lat * (Math.PI / 180)) * Math.sin(p2.lat * (Math.PI / 180)) -
-        Math.sin(p1.lat * (Math.PI / 180)) *
-          Math.cos(p2.lat * (Math.PI / 180)) *
-          Math.cos((p2.lng - p1.lng) * (Math.PI / 180));
-      heading = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+
+    // If phone is not physically on this route corridor (e.g. testing different city),
+    // default to following along the route to destination smoothly
+    if (!isNearbyRoute) {
+      const interpolated = getInterpolatedPosition(progress);
+      activeNavCoord = interpolated.coord;
+      heading = interpolated.heading;
+    } else {
+      if (prevGpsCoordRef.current && (gpsData.heading === null || gpsData.heading === 0)) {
+        const p1 = prevGpsCoordRef.current;
+        const p2 = currentCoord;
+        const y = Math.sin((p2.lng - p1.lng) * (Math.PI / 180)) * Math.cos(p2.lat * (Math.PI / 180));
+        const x =
+          Math.cos(p1.lat * (Math.PI / 180)) * Math.sin(p2.lat * (Math.PI / 180)) -
+          Math.sin(p1.lat * (Math.PI / 180)) *
+            Math.cos(p2.lat * (Math.PI / 180)) *
+            Math.cos((p2.lng - p1.lng) * (Math.PI / 180));
+        heading = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+      }
+      prevGpsCoordRef.current = currentCoord;
     }
-    prevGpsCoordRef.current = currentCoord;
 
     // Calculate remaining distance to destination
-    const destCoord = routePoints[routePoints.length - 1] || currentCoord;
-    const remainingDist = Math.round(haversineMeters(currentCoord, destCoord));
-    const speed = gpsData.speedKmh || 40;
+    const remainingDist = Math.round(haversineMeters(activeNavCoord, destCoord));
+    const speed = gpsData.speedKmh || 42;
     const remainingDur = Math.max(0, Math.round((remainingDist / (speed * 1000)) * 3600));
 
     // Find next upcoming railway crossing
     const { crossing: nextCross, distanceMeters: distToNextCross } =
-      getNextUpcomingCrossingForCoord(currentCoord);
+      getNextUpcomingCrossingForCoord(activeNavCoord);
 
     if (remainingDist < 50) {
       setHasReachedDestination(true);
@@ -123,7 +138,7 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
 
     updateNavTelemetry({
       progress: Math.min(1, Math.max(0, 1 - remainingDist / totalDistance)),
-      coord: currentCoord,
+      coord: activeNavCoord,
       heading,
       speedKmh: speed,
       remainingDistance: remainingDist,
@@ -132,8 +147,8 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
       distanceToNextCrossing: distToNextCross
     });
 
-    onVehicleMove?.(currentCoord, heading);
-  }, [gpsData, navMode, totalDistance]);
+    onVehicleMove?.(activeNavCoord, heading);
+  }, [gpsData, navMode, totalDistance, routePoints.length, progress]);
 
   // Find next upcoming crossing relative to current coordinate
   const getNextUpcomingCrossingForCoord = (currentCoord: Coordinate) => {

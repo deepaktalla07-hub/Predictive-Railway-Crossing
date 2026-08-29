@@ -181,18 +181,20 @@ export class LeafletMapAdapter implements IMapAdapter {
     // Draw Alternative Polyline first (underneath primary)
     if (alternativeCoords && alternativeCoords.length > 0) {
       this.altLayer = L.polyline(alternativeCoords, {
-        color: '#8b5cf6',
+        color: '#a855f7',
         weight: 6,
         opacity: 0.85,
         dashArray: '8, 8'
       }).addTo(this.map);
     }
 
-    // Draw Primary Polyline
+    // Draw Primary Polyline with Google Maps bold navigation styling
     this.primaryLayer = L.polyline(primaryCoords, {
-      color: '#2563eb',
-      weight: 6,
-      opacity: 0.95
+      color: '#38bdf8',
+      weight: 7,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round'
     }).addTo(this.map);
   }
 
