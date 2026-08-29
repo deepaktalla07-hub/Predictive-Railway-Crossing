@@ -6,10 +6,11 @@ import { useRouteAnalysis } from './hooks/useRouteAnalysis';
 export const App: React.FC = () => {
   const { analyze } = useRouteAnalysis();
 
-  // Run initial route analysis on mount
+  // Run initial route analysis once on mount
   useEffect(() => {
     analyze();
-  }, [analyze]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden select-none font-sans">

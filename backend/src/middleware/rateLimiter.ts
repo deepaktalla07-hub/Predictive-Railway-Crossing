@@ -7,13 +7,22 @@ interface RateLimitRecord {
   resetTime: number;
 }
 
+/**
+ * Determines if the process is running inside a Vercel Serverless Function.
+ * In serverless environments, the in-memory rate limiter is not reliable because
+ * each cold-start gets a fresh Map and instances do not share memory.
+ * Vercel's Edge Config or upstash/ratelimit should be used instead for production rate limiting.
+ */
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 export function rateLimiter(maxRequests = 120, windowMs = 60000) {
   // Instance-scoped map so each rate limiter middleware instance maintains separate counters
   const ipBuckets = new Map<string, RateLimitRecord>();
 
   return (req: Request, _res: Response, next: NextFunction) => {
     // In local development mode, bypass rate limiting to prevent throttling during testing & hot reloading
-    if (config.NODE_ENV === 'development') {
+    // In serverless environments, bypass in-memory rate limiting (not reliable across cold starts)
+    if (config.NODE_ENV === 'development' || isServerless) {
       return next();
     }
 

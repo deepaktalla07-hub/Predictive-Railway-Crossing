@@ -8,7 +8,7 @@ export const Header: React.FC = () => {
   const { data: health } = useSystemHealth();
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between z-20 shadow-xl">
+    <header className="h-14 px-4 sm:px-6 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between z-20 shadow-xl">
       {/* Brand Identity */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 flex-shrink-0">

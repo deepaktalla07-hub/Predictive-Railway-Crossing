@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { routeApi } from '../services/api';
 import { RiskLevel, RouteAnalysisResponse } from '@railway-gate/shared';
@@ -51,7 +51,7 @@ export function useRealtimeSync(refreshIntervalSeconds = 25): RealtimeSyncState 
     return () => clearInterval(timer);
   }, [lastUpdatedTimestamp]);
 
-  const fetchUpdate = async () => {
+  const fetchUpdate = useCallback(async () => {
     if (!analysisResult || !origin || !destination) return;
     if (document.visibilityState !== 'visible') return; // Pause polling when tab is inactive
 
@@ -85,7 +85,7 @@ export function useRealtimeSync(refreshIntervalSeconds = 25): RealtimeSyncState 
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [analysisResult, origin, destination, departureMode, customDepartureTime, avoidHighRiskGates, setAnalysisResult]);
 
   // Periodic Polling
   useEffect(() => {
@@ -96,7 +96,7 @@ export function useRealtimeSync(refreshIntervalSeconds = 25): RealtimeSyncState 
     }, refreshIntervalSeconds * 1000);
 
     return () => clearInterval(interval);
-  }, [analysisResult, origin, destination, departureMode, customDepartureTime]);
+  }, [fetchUpdate, analysisResult, refreshIntervalSeconds]);
 
   const isStale = secondsAgo > 60;
   const staleWarning = isStale ? 'Data may be outdated.' : null;
