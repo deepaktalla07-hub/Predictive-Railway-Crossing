@@ -31,11 +31,14 @@ export class NominatimPlacesProvider implements IPlacesProvider {
       const results = (response.data || []).map((item: any) => {
         const name = item.name || item.display_name.split(',')[0];
         const secondary = item.display_name.replace(name, '').replace(/^,\s*/, '');
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
         return {
-          placeId: `osm_${item.place_id}`,
+          placeId: `osm_${item.place_id}_${lat}_${lng}`,
           mainText: name,
           secondaryText: secondary,
-          description: item.display_name
+          description: item.display_name,
+          coordinate: isNaN(lat) || isNaN(lng) ? undefined : { lat, lng }
         };
       });
 
@@ -49,7 +52,33 @@ export class NominatimPlacesProvider implements IPlacesProvider {
 
   public async getDetails(placeId: string): Promise<PlaceDetails | null> {
     try {
-      const osmId = placeId.replace('osm_', '');
+      // 1. First check if coordinates are embedded in placeId (osm_id_lat_lng)
+      const parts = placeId.split('_');
+      if (parts.length >= 4) {
+        const lat = parseFloat(parts[2]);
+        const lng = parseFloat(parts[3]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return {
+            placeId,
+            coordinate: { lat, lng },
+            formattedAddress: ''
+          };
+        }
+      }
+
+      // 2. Check cache for matching suggestion
+      for (const suggestions of cache.values()) {
+        const match = suggestions.find((s) => s.placeId === placeId);
+        if (match?.coordinate) {
+          return {
+            placeId,
+            coordinate: match.coordinate,
+            formattedAddress: match.description
+          };
+        }
+      }
+
+      const osmId = parts[1] || placeId.replace('osm_', '');
       const url = `${this.baseUrl}/details?place_id=${osmId}&format=json`;
       const response = await axios.get(url, { timeout: 6000 });
 

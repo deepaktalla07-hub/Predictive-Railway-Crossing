@@ -78,11 +78,17 @@ export const PlacesAutocompleteInput: React.FC<PlacesAutocompleteInputProps> = (
   const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
     setInputValue(suggestion.description);
     setIsOpen(false);
-    setIsLoading(true);
 
+    // If suggestion already has coordinates from provider, apply immediately
+    if (suggestion.coordinate) {
+      onChange(suggestion.coordinate, suggestion.description);
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const details = await defaultPlacesProvider.getDetails(suggestion.placeId);
-      if (details) {
+      if (details?.coordinate) {
         onChange(details.coordinate, suggestion.description);
       } else {
         onChange(coordinate, suggestion.description);

@@ -15,7 +15,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
 
   // Provider selection
-  ROUTING_PROVIDER: z.enum(['DEV_STUB', 'OSRM', 'GOOGLE']).default('DEV_STUB'),
+  ROUTING_PROVIDER: z.enum(['DEV_STUB', 'OSRM', 'GOOGLE']).default('OSRM'),
   RAILWAY_CROSSING_PROVIDER: z.enum(['DEV_STUB', 'OSM_OVERPASS', 'POSTGIS']).default('OSM_OVERPASS'),
   TRAIN_SCHEDULE_PROVIDER: z.enum(['DEV_STUB', 'LOCAL_BASELINE', 'RAPIDAPI_LIVE']).default('LOCAL_BASELINE'),
 

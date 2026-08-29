@@ -5,6 +5,7 @@ export interface PlaceSuggestion {
   mainText: string;
   secondaryText?: string;
   description: string;
+  coordinate?: Coordinate;
 }
 
 export interface PlaceDetails {
