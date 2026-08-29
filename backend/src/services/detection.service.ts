@@ -134,7 +134,47 @@ export class RailwayCrossingDetectionService {
     // 5. Order detected crossings strictly according to the user's direction of travel
     matchedCrossings.sort((a, b) => a.distance - b.distance);
 
-    return matchedCrossings;
+    // 6. Intelligent Spatial & Attribute Deduplication:
+    // Multi-track and dual-carriageway railway crossings frequently produce multiple OSM nodes
+    // within 5–120 meters of each other representing the same physical gate.
+    // Merge proximate nodes (<120m apart or sharing the same crossing code/name) into a single consolidated crossing.
+    const deduplicated: DetectedCrossing[] = [];
+    for (const current of matchedCrossings) {
+      if (deduplicated.length === 0) {
+        deduplicated.push(current);
+        continue;
+      }
+
+      const prev = deduplicated[deduplicated.length - 1];
+      const distanceApart = Math.abs(current.distance - prev.distance);
+
+      const isSameCrossing =
+        distanceApart <= 120 || // Within 120m along the road corridor
+        (Boolean(current.crossingCode) && Boolean(prev.crossingCode) && current.crossingCode === prev.crossingCode) ||
+        (Boolean(current.crossingName) && Boolean(prev.crossingName) && current.crossingName === prev.crossingName);
+
+      if (isSameCrossing) {
+        // Merge into the existing crossing: pick the richer name, valid crossing code, and maximum tracks
+        if (!prev.crossingName && current.crossingName) {
+          prev.crossingName = current.crossingName;
+        }
+        if (!prev.crossingCode && current.crossingCode) {
+          prev.crossingCode = current.crossingCode;
+        }
+        if (current.rawCrossing?.tracksCount && (!prev.rawCrossing?.tracksCount || current.rawCrossing.tracksCount > prev.rawCrossing.tracksCount)) {
+          if (prev.rawCrossing) {
+            prev.rawCrossing.tracksCount = current.rawCrossing.tracksCount;
+          }
+        }
+        if (current.rawCrossing?.confidenceScore && prev.rawCrossing?.confidenceScore) {
+          prev.rawCrossing.confidenceScore = Math.max(prev.rawCrossing.confidenceScore, current.rawCrossing.confidenceScore);
+        }
+      } else {
+        deduplicated.push(current);
+      }
+    }
+
+    return deduplicated;
   }
 
   /**

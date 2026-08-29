@@ -8,7 +8,7 @@ import {
 } from '@railway-gate/shared';
 import { GetCrossingsOptions, IRailwayCrossingProvider } from './IRailwayCrossingProvider';
 import { CrossingCache } from './CrossingCache';
-import { computeBoundingBox, distanceToPolylineMeters } from '../../utils/geo.utils';
+import { computeBoundingBox, distanceToPolylineMeters, calculateHaversineDistanceMeters } from '../../utils/geo.utils';
 
 // Multi-mirror fallback list for high availability
 const OVERPASS_MIRRORS = [
@@ -317,8 +317,9 @@ export class OsmOverpassCrossingProvider implements IRailwayCrossingProvider {
 
       if (elements && elements.length > 0) {
         const records = elements.map((el) => this.parseOsmNode(el));
-        this.cache.setByBBox(bbox, records);
-        return records;
+        const deduplicated = this.deduplicateRecords(records, 60);
+        this.cache.setByBBox(bbox, deduplicated);
+        return deduplicated;
       }
     } catch (err: any) {
       console.warn(`[OsmOverpassCrossingProvider] Overpass live fetch failed, using local baseline:`, err.message);
@@ -333,8 +334,39 @@ export class OsmOverpassCrossingProvider implements IRailwayCrossingProvider {
         c.longitude <= bbox.maxLng
     );
 
-    this.cache.setByBBox(bbox, fallbackMatches, 3600 * 1000); // 1-hour short cache for fallback
-    return fallbackMatches;
+    const deduplicatedFallback = this.deduplicateRecords(fallbackMatches, 60);
+    this.cache.setByBBox(bbox, deduplicatedFallback, 3600 * 1000); // 1-hour short cache for fallback
+    return deduplicatedFallback;
+  }
+
+  /**
+   * Deduplicates adjacent level crossing nodes representing the same physical gate.
+   */
+  private deduplicateRecords(records: RailwayCrossingRecord[], proximityMeters = 60): RailwayCrossingRecord[] {
+    const unique: RailwayCrossingRecord[] = [];
+    for (const record of records) {
+      const existing = unique.find((u) => {
+        const dist = calculateHaversineDistanceMeters(
+          { lat: u.latitude, lng: u.longitude },
+          { lat: record.latitude, lng: record.longitude }
+        );
+        return (
+          dist <= proximityMeters ||
+          (Boolean(u.crossingCode) && Boolean(record.crossingCode) && u.crossingCode === record.crossingCode)
+        );
+      });
+
+      if (existing) {
+        if (!existing.name && record.name) existing.name = record.name;
+        if (!existing.crossingCode && record.crossingCode) existing.crossingCode = record.crossingCode;
+        if (record.tracksCount && (!existing.tracksCount || record.tracksCount > existing.tracksCount)) {
+          existing.tracksCount = record.tracksCount;
+        }
+      } else {
+        unique.push({ ...record });
+      }
+    }
+    return unique;
   }
 
   private async queryOverpassWithMirrorFallback(queryParam: string): Promise<any[]> {
