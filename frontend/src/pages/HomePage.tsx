@@ -6,6 +6,7 @@ import { RouteSummaryCard } from '../features/routes/RouteSummaryCard';
 import { AlternativeSelector } from '../features/routes/AlternativeSelector';
 import { CrossingDrawer } from '../features/railway/CrossingDrawer';
 import { MobileBottomSheet } from '../components/layout/MobileBottomSheet';
+import { LiveNavigationOverlay } from '../features/navigation/LiveNavigationOverlay';
 import {
   LoadingStateView,
   ErrorStateView,
@@ -27,7 +28,8 @@ export const HomePage: React.FC = () => {
     selectedCrossing,
     setSelectedCrossing,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    isNavigating
   } = useAppStore();
 
   const primary = analysisResult?.primaryRoute;
@@ -45,18 +47,24 @@ export const HomePage: React.FC = () => {
         <MapView />
       </div>
 
-      {/* Floating System Provenance Status Pill (Top Center Desktop) */}
-      <div className="hidden lg:flex absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-        <div className="px-3.5 py-1.5 bg-slate-900/90 backdrop-blur-md rounded-full border border-slate-800 shadow-xl flex items-center gap-2 text-xs text-slate-300 pointer-events-auto">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold text-slate-200">OSM & Train Telemetry Network</span>
-          <span className="text-slate-500">•</span>
-          <span className="text-[11px] text-slate-400">Strict Provenance Active</span>
-        </div>
-      </div>
+      {/* Live Fullscreen Navigation HUD Overlay (When Driving) */}
+      {isNavigating && <LiveNavigationOverlay />}
 
-      {/* 2. Desktop Floating Split Cockpit (Left Deck) */}
-      <div className="hidden md:flex absolute top-4 left-4 z-10 w-full max-w-sm lg:max-w-md max-h-[calc(100vh-6rem)] flex-col gap-3 pointer-events-none">
+      {/* Floating System Provenance Status Pill (Top Center Desktop) - Hidden during Navigation */}
+      {!isNavigating && (
+        <div className="hidden lg:flex absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="px-3.5 py-1.5 bg-slate-900/90 backdrop-blur-md rounded-full border border-slate-800 shadow-xl flex items-center gap-2 text-xs text-slate-300 pointer-events-auto">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-semibold text-slate-200">OSM & Train Telemetry Network</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-[11px] text-slate-400">Strict Provenance Active</span>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Desktop Floating Split Cockpit (Left Deck) - Hidden during Navigation */}
+      {!isNavigating && (
+        <div className="hidden md:flex absolute top-4 left-4 z-10 w-full max-w-sm lg:max-w-md max-h-[calc(100vh-6rem)] flex-col gap-3 pointer-events-none">
         {/* Navigation Mode Tabs */}
         {analysisResult && (
           <div className="flex bg-slate-900/95 backdrop-blur-xl p-1 rounded-2xl border border-slate-800/90 shadow-2xl pointer-events-auto">
@@ -139,29 +147,32 @@ export const HomePage: React.FC = () => {
           ) : null}
         </div>
       </div>
+      )}
 
-      {/* 3. Mobile Responsive Bottom Sheet Drawer */}
-      <MobileBottomSheet
-        title={
-          analysisResult
-            ? `Route: ${primary?.summary.split(' ')[0]} • ${primary?.crossings.length || 0} Gates`
-            : 'Find Delay-Free Route'
-        }
-      >
-        <RouteControls />
+      {/* 3. Mobile Responsive Bottom Sheet Drawer - Hidden during Navigation */}
+      {!isNavigating && (
+        <MobileBottomSheet
+          title={
+            analysisResult
+              ? `Route: ${primary?.summary.split(' ')[0]} • ${primary?.crossings.length || 0} Gates`
+              : 'Find Delay-Free Route'
+          }
+        >
+          <RouteControls />
 
-        {analysisResult && <RealtimeSyncBar />}
+          {analysisResult && <RealtimeSyncBar />}
 
-        {isLoading ? (
-          <LoadingStateView />
-        ) : analysisResult ? (
-          <>
-            {isZeroCrossings && <NoCrossingsStateView />}
-            <RouteSummaryCard />
-            {analysisResult.alternativeRoutes.length > 0 && <AlternativeSelector />}
-          </>
-        ) : null}
-      </MobileBottomSheet>
+          {isLoading ? (
+            <LoadingStateView />
+          ) : analysisResult ? (
+            <>
+              {isZeroCrossings && <NoCrossingsStateView />}
+              <RouteSummaryCard />
+              {analysisResult.alternativeRoutes.length > 0 && <AlternativeSelector />}
+            </>
+          ) : null}
+        </MobileBottomSheet>
+      )}
 
       {/* 4. Selected Crossing Side Drawer (Desktop Drawer Overlay) */}
       {selectedCrossing && (

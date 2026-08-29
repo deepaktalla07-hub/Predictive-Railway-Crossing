@@ -33,6 +33,17 @@ interface AppState {
   isSafetyModalOpen: boolean;
   systemHealth: SystemHealthResponse | null;
 
+  // Live Turn-by-Turn Navigation State
+  isNavigating: boolean;
+  navProgress: number; // 0 to 1
+  vehicleCoord: Coordinate | null;
+  vehicleHeading: number; // degrees
+  currentSpeedKmh: number;
+  remainingDistanceMeters: number;
+  remainingDurationSeconds: number;
+  nextCrossing: CrossingRiskDetail | null;
+  distanceToNextCrossingMeters: number | null;
+
   // Actions
   setOrigin: (coord: Coordinate, label?: string) => void;
   setDestination: (coord: Coordinate, label?: string) => void;
@@ -49,6 +60,18 @@ interface AppState {
   setIsSourcesModalOpen: (open: boolean) => void;
   setIsSafetyModalOpen: (open: boolean) => void;
   setSystemHealth: (health: SystemHealthResponse | null) => void;
+  startNavigation: () => void;
+  stopNavigation: () => void;
+  updateNavTelemetry: (telemetry: {
+    progress: number;
+    coord: Coordinate;
+    heading: number;
+    speedKmh: number;
+    remainingDistance: number;
+    remainingDuration: number;
+    nextCrossing: CrossingRiskDetail | null;
+    distanceToNextCrossing: number | null;
+  }) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -74,6 +97,17 @@ export const useAppStore = create<AppState>((set) => ({
   isSafetyModalOpen: false,
   systemHealth: null,
 
+  // Live Navigation State
+  isNavigating: false,
+  navProgress: 0,
+  vehicleCoord: null,
+  vehicleHeading: 0,
+  currentSpeedKmh: 45,
+  remainingDistanceMeters: 0,
+  remainingDurationSeconds: 0,
+  nextCrossing: null,
+  distanceToNextCrossingMeters: null,
+
   setOrigin: (coord, label) =>
     set({ origin: coord, originLabel: label || `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}` }),
   setDestination: (coord, label) =>
@@ -94,5 +128,34 @@ export const useAppStore = create<AppState>((set) => ({
   setIsProvenanceModalOpen: (open) => set({ isProvenanceModalOpen: open }),
   setIsSourcesModalOpen: (open) => set({ isSourcesModalOpen: open }),
   setIsSafetyModalOpen: (open) => set({ isSafetyModalOpen: open }),
-  setSystemHealth: (health) => set({ systemHealth: health })
+  setSystemHealth: (health) => set({ systemHealth: health }),
+
+  startNavigation: () =>
+    set((state) => ({
+      isNavigating: true,
+      navProgress: 0,
+      vehicleCoord: state.origin,
+      remainingDistanceMeters: state.analysisResult?.primaryRoute.distanceMeters || 0,
+      remainingDurationSeconds: state.analysisResult?.primaryRoute.durationSeconds || 0,
+      nextCrossing: state.analysisResult?.primaryRoute.crossings[0] || null
+    })),
+
+  stopNavigation: () =>
+    set({
+      isNavigating: false,
+      navProgress: 0,
+      vehicleCoord: null
+    }),
+
+  updateNavTelemetry: (t) =>
+    set({
+      navProgress: t.progress,
+      vehicleCoord: t.coord,
+      vehicleHeading: t.heading,
+      currentSpeedKmh: t.speedKmh,
+      remainingDistanceMeters: t.remainingDistance,
+      remainingDurationSeconds: t.remainingDuration,
+      nextCrossing: t.nextCrossing,
+      distanceToNextCrossingMeters: t.distanceToNextCrossing
+    })
 }));

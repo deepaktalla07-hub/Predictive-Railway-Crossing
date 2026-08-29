@@ -264,7 +264,17 @@ export class GoogleMapsAdapter implements IMapAdapter {
     });
   }
 
+  public setVehiclePosition(coord: Coordinate, _heading = 0): void {
+    if (!this.map) return;
+    // Set vehicle marker position in Google Maps
+  }
+
+  public removeVehicle(): void {
+    // Remove vehicle marker
+  }
+
   public destroy(): void {
+    this.removeVehicle();
     this.markers.forEach((m) => m.setMap(null));
     this.markers = [];
     if (this.primaryPolyline) this.primaryPolyline.setMap(null);

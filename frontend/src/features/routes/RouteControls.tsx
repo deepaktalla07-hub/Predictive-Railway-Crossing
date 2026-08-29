@@ -95,11 +95,13 @@ export const RouteControls: React.FC = () => {
     customDepartureTime,
     avoidHighRiskGates,
     isLoading,
+    analysisResult,
     setOrigin,
     setDestination,
     setDepartureMode,
     setCustomDepartureTime,
-    setAvoidHighRiskGates
+    setAvoidHighRiskGates,
+    startNavigation
   } = useAppStore();
 
   const { analyze } = useRouteAnalysis();
@@ -389,25 +391,38 @@ export const RouteControls: React.FC = () => {
         </div>
       </div>
 
-      {/* Find Route Action Button */}
-      <button
-        type="button"
-        disabled={isLoading}
-        onClick={() => analyze()}
-        className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.99]"
-      >
-        {isLoading ? (
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <span>Calculating Route & Gate Closures...</span>
-          </div>
-        ) : (
-          <>
-            <Search className="w-4 h-4" />
-            <span>Find Delay-Free Route</span>
-          </>
+      {/* Actions Row: Find Route & Start Navigation */}
+      <div className="flex flex-col gap-2">
+        {analysisResult && (
+          <button
+            type="button"
+            onClick={() => startNavigation()}
+            className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.99] animate-pulse hover:animate-none"
+          >
+            <Navigation className="w-4 h-4 fill-current" />
+            <span>Start Live Navigation</span>
+          </button>
         )}
-      </button>
+
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => analyze()}
+          className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.99]"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span>Calculating Route & Gate Closures...</span>
+            </div>
+          ) : (
+            <>
+              <Search className="w-4 h-4" />
+              <span>{analysisResult ? 'Recalculate Route' : 'Find Delay-Free Route'}</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };

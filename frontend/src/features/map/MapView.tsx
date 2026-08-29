@@ -41,11 +41,27 @@ export const MapView: React.FC = () => {
     setSelectedCrossing,
     setActiveTab,
     setOrigin,
-    setDestination
+    setDestination,
+    isNavigating,
+    vehicleCoord,
+    vehicleHeading
   } = useAppStore();
 
   const { analyze } = useRouteAnalysis();
   const { getCurrentLocation, location: userLocation, loading: geoLoading } = useGeolocation();
+
+  // Synchronize Live Navigation Vehicle Marker & Camera Tracking
+  useEffect(() => {
+    const adapter = adapterRef.current;
+    if (!adapter) return;
+
+    if (isNavigating && vehicleCoord) {
+      adapter.setVehiclePosition(vehicleCoord, vehicleHeading);
+      adapter.setCenter(vehicleCoord);
+    } else {
+      adapter.removeVehicle();
+    }
+  }, [isNavigating, vehicleCoord, vehicleHeading]);
 
   // Initialize Map Adapter once container is mounted
   useEffect(() => {

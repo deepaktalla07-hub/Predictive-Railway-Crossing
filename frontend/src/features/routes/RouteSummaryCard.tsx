@@ -24,7 +24,8 @@ export const RouteSummaryCard: React.FC = () => {
     selectedAlternativeId,
     originLabel,
     destinationLabel,
-    setActiveTab
+    setActiveTab,
+    startNavigation
   } = useAppStore();
 
   if (!analysisResult) return null;
@@ -66,6 +67,16 @@ export const RouteSummaryCard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Primary Action: Start Live Turn-by-Turn Navigation */}
+      <button
+        type="button"
+        onClick={() => startNavigation()}
+        className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.99] animate-pulse hover:animate-none"
+      >
+        <Navigation className="w-4 h-4 fill-current" />
+        <span>Start Live Navigation</span>
+      </button>
 
       {/* START / DESTINATION / ETA TELEMETRY GRID */}
       <div className="grid grid-cols-2 gap-2 text-[11px]">

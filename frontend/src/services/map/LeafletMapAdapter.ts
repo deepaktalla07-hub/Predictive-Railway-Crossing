@@ -5,7 +5,8 @@ import { IMapAdapter, MapBaseLayerType, MapInitOptions } from './interfaces';
 import {
   createOriginMarkerIcon,
   createDestinationMarkerIcon,
-  createCrossingMarkerIcon
+  createCrossingMarkerIcon,
+  createVehicleMarkerIcon
 } from '../../utils/map.utils';
 import { formatClockTime } from '../../utils/formatters';
 
@@ -37,6 +38,7 @@ export class LeafletMapAdapter implements IMapAdapter {
   private primaryLayer: L.Polyline | null = null;
   private altLayer: L.Polyline | null = null;
   private markerLayerGroup: L.LayerGroup | null = null;
+  private vehicleMarker: L.Marker | null = null;
   private currentBaseLayer: MapBaseLayerType = 'streets';
 
   public async initialize(container: HTMLElement, options: MapInitOptions): Promise<void> {
@@ -279,7 +281,29 @@ export class LeafletMapAdapter implements IMapAdapter {
     });
   }
 
+  public setVehiclePosition(coord: Coordinate, heading = 0): void {
+    if (!this.map) return;
+
+    if (!this.vehicleMarker) {
+      this.vehicleMarker = L.marker([coord.lat, coord.lng], {
+        icon: createVehicleMarkerIcon(heading),
+        zIndexOffset: 1000
+      }).addTo(this.map);
+    } else {
+      this.vehicleMarker.setLatLng([coord.lat, coord.lng]);
+      this.vehicleMarker.setIcon(createVehicleMarkerIcon(heading));
+    }
+  }
+
+  public removeVehicle(): void {
+    if (this.vehicleMarker) {
+      this.vehicleMarker.remove();
+      this.vehicleMarker = null;
+    }
+  }
+
   public destroy(): void {
+    this.removeVehicle();
     if (this.map) {
       this.map.remove();
       this.map = null;

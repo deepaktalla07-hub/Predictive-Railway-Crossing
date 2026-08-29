@@ -88,3 +88,26 @@ export function createCrossingMarkerIcon(
     iconAnchor: [20, 25]
   });
 }
+
+export function createVehicleMarkerIcon(heading = 0): L.DivIcon {
+  return L.divIcon({
+    className: 'custom-vehicle-marker',
+    html: `
+      <div class="relative flex items-center justify-center w-12 h-12">
+        <div class="absolute w-10 h-10 bg-cyan-500/25 rounded-full animate-ping"></div>
+        <div class="absolute w-12 h-12 bg-blue-500/20 rounded-full"></div>
+        <div
+          class="relative w-9 h-9 bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 rounded-full border-2 border-white shadow-2xl flex items-center justify-center text-white transform transition-transform duration-100"
+          style="transform: rotate(${heading}deg);"
+        >
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+          </svg>
+        </div>
+      </div>
+    `,
+    iconSize: [48, 48],
+    iconAnchor: [24, 24]
+  });
+}
+

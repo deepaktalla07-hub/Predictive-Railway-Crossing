@@ -42,6 +42,8 @@ export interface IMapAdapter {
     onOriginDragEnd?: (coord: Coordinate) => void,
     onDestinationDragEnd?: (coord: Coordinate) => void
   ): void;
+  setVehiclePosition(coord: Coordinate, heading: number): void;
+  removeVehicle(): void;
   destroy(): void;
 }
 
