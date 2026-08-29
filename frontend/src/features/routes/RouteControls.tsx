@@ -3,61 +3,14 @@ import { useAppStore } from '../../store/useAppStore';
 import { useRouteAnalysis } from '../../hooks/useRouteAnalysis';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { PlacesAutocompleteInput } from './PlacesAutocompleteInput';
-import { RoutePreset } from '../../types';
 import {
   ArrowUpDown,
   Compass,
-  Sparkles,
   Search,
   Clock,
   Navigation,
-  MapPin,
-  Calendar,
-  ChevronDown
+  Calendar
 } from 'lucide-react';
-
-const SCENARIO_PRESETS: RoutePreset[] = [
-  {
-    id: 'preset-high-risk',
-    name: 'Bengaluru → Hosur (LC-88A)',
-    scenarioType: 'HIGH_RISK_CONFLICT',
-    badge: 'HIGH RISK CONFLICT',
-    description: 'Imminent gate closure with Intercity Express conflict',
-    origin: { lat: 12.9177, lng: 77.6238, label: 'Silk Board Junction, Bengaluru' },
-    destination: { lat: 12.7409, lng: 77.8253, label: 'Hosur Town Center' },
-    isDemoData: true
-  },
-  {
-    id: 'preset-moderate',
-    name: 'Sarjapur → Karmelaram (LC-92B)',
-    scenarioType: 'MODERATE_WARNING',
-    badge: 'MODERATE WARNING',
-    description: 'Approaching Karmelaram gate near window threshold',
-    origin: { lat: 12.9250, lng: 77.6850, label: 'Bellandur EcoSpace' },
-    destination: { lat: 12.8600, lng: 77.7800, label: 'Sarjapur Town' },
-    isDemoData: true
-  },
-  {
-    id: 'preset-clear',
-    name: 'MG Road → Indiranagar',
-    scenarioType: 'CLEAR_NO_CROSSINGS',
-    badge: 'ZERO CROSSINGS',
-    description: 'Unimpeded urban route with 0 level crossings',
-    origin: { lat: 12.9750, lng: 77.6090, label: 'MG Road Metro Station' },
-    destination: { lat: 12.9784, lng: 77.6408, label: '100ft Road, Indiranagar' },
-    isDemoData: true
-  },
-  {
-    id: 'preset-insufficient',
-    name: 'Whitefield → Hoodi (LC-UNK)',
-    scenarioType: 'INSUFFICIENT_DATA',
-    badge: 'INSUFFICIENT DATA',
-    description: 'Crossing with missing railway timetable feed',
-    origin: { lat: 12.9698, lng: 77.7500, label: 'ITPL Main Gate' },
-    destination: { lat: 12.9900, lng: 77.7150, label: 'Hoodi Industrial Area' },
-    isDemoData: true
-  }
-];
 
 function toLocalDatetimeString(isoDate: string): string {
   const d = new Date(isoDate);
@@ -106,17 +59,6 @@ export const RouteControls: React.FC = () => {
 
   const { analyze } = useRouteAnalysis();
   const { getCurrentLocation, loading: geoLoading } = useGeolocation();
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('preset-high-risk');
-
-  const handleApplyPreset = (preset: RoutePreset) => {
-    setSelectedPresetId(preset.id);
-    setOrigin(preset.origin, preset.origin.label);
-    setDestination(preset.destination, preset.destination.label);
-    analyze({
-      origin: preset.origin,
-      destination: preset.destination
-    });
-  };
 
   const handleSwap = () => {
     const tempOrigin = origin;
@@ -220,44 +162,6 @@ export const RouteControls: React.FC = () => {
           iconType="destination"
           ariaLabel="Destination Location"
         />
-      </div>
-
-      {/* Scenario Presets Quick-Deck */}
-      <div className="flex flex-col gap-1.5 pt-1">
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="font-bold text-slate-300 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Navigation Test Scenarios:
-          </span>
-          <span className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">
-            [DEMO DATA]
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5">
-          {SCENARIO_PRESETS.map((preset) => {
-            const isSelected = selectedPresetId === preset.id;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => handleApplyPreset(preset)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 group ${
-                  isSelected
-                    ? 'bg-blue-600/15 border-blue-500/60 shadow-md ring-1 ring-blue-500/30'
-                    : 'bg-slate-950/50 hover:bg-slate-800/80 border-slate-800/80'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-200 group-hover:text-white truncate">
-                    {preset.name}
-                  </span>
-                </div>
-                <span className="text-[9px] text-slate-400 line-clamp-1">{preset.description}</span>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Advanced Timing & Gate Avoidance Controls */}
