@@ -35,8 +35,8 @@ export interface IMapAdapter {
   toggleRailwayOverlay(enabled: boolean): void;
   drawRoutes(primaryCoords: [number, number][], alternativeCoords?: [number, number][]): void;
   setMarkers(
-    origin: Coordinate,
-    destination: Coordinate,
+    origin: Coordinate | null,
+    destination: Coordinate | null,
     crossings: CrossingRiskDetail[],
     onSelectCrossing?: (crossing: CrossingRiskDetail) => void,
     onOriginDragEnd?: (coord: Coordinate) => void,

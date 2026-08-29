@@ -210,7 +210,12 @@ export const RouteControls: React.FC = () => {
         <PlacesAutocompleteInput
           value={destinationLabel}
           coordinate={destination}
-          onChange={(coord, label) => setDestination(coord, label)}
+          onChange={(coord, label) => {
+            setDestination(coord, label);
+            if (coord && origin) {
+              analyze({ origin, destination: coord });
+            }
+          }}
           placeholder="DESTINATION Location (Search Places)"
           iconType="destination"
           ariaLabel="Destination Location"
@@ -248,44 +253,30 @@ export const RouteControls: React.FC = () => {
                     {preset.name}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-1">
-                  <span
-                    className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded uppercase ${
-                      preset.scenarioType === 'HIGH_RISK_CONFLICT'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : preset.scenarioType === 'MODERATE_WARNING'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : preset.scenarioType === 'CLEAR_NO_CROSSINGS'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}
-                  >
-                    {preset.badge}
-                  </span>
-                </div>
+                <span className="text-[9px] text-slate-400 line-clamp-1">{preset.description}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Google Maps Style Departure Time Controls */}
-      <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
-        {/* Toggle Mode Row */}
+      {/* Advanced Timing & Gate Avoidance Controls */}
+      <div className="flex flex-col gap-2 pt-1 border-t border-slate-800/80">
+        {/* Departure Time Mode Tabs */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold text-slate-200 text-xs">Departure Time</span>
-          </div>
+            Departure Time:
+          </span>
 
-          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
             <button
               type="button"
               onClick={() => handleDepartureModeChange('NOW')}
-              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
                 departureMode === 'NOW'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Leave now
@@ -293,10 +284,10 @@ export const RouteControls: React.FC = () => {
             <button
               type="button"
               onClick={() => handleDepartureModeChange('CUSTOM')}
-              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
                 departureMode === 'CUSTOM'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Depart at
@@ -346,39 +337,27 @@ export const RouteControls: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => addQuickMinutes(120)}
-                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
-              >
-                +2h
-              </button>
-              <button
-                type="button"
                 onClick={() => setTomorrowTime(9, 0)}
-                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 rounded text-[10px] font-medium border border-cyan-900/50 transition-colors cursor-pointer"
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
               >
                 Tmrw 9 AM
               </button>
-              <button
-                type="button"
-                onClick={() => setTomorrowTime(17, 0)}
-                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 rounded text-[10px] font-medium border border-cyan-900/50 transition-colors cursor-pointer"
-              >
-                Tmrw 5 PM
-              </button>
-            </div>
-
-            {/* Formatted Schedule Summary */}
-            <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-900/60 px-2 py-1 rounded border border-slate-800/60">
-              <span>Predicting closures for:</span>
-              <span className="font-bold text-cyan-300">
-                {formatDepartureLabel(customDepartureTime || new Date().toISOString())}
-              </span>
             </div>
           </div>
         )}
 
-        {/* Avoid High Risk Gates Option */}
-        <div className="flex items-center justify-between pt-1">
+        {/* Departure Time Active Summary Chip */}
+        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+          <span>Scheduled Departure:</span>
+          <span className="font-mono text-cyan-400 font-semibold">
+            {departureMode === 'NOW'
+              ? 'Immediate (Now)'
+              : formatDepartureLabel(customDepartureTime || new Date().toISOString())}
+          </span>
+        </div>
+
+        {/* Avoid High Risk Gates Checkbox */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
           <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-300">
             <input
               type="checkbox"
@@ -406,7 +385,7 @@ export const RouteControls: React.FC = () => {
 
         <button
           type="button"
-          disabled={isLoading}
+          disabled={isLoading || !destination}
           onClick={() => analyze()}
           className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-[0.99]"
         >
@@ -415,6 +394,11 @@ export const RouteControls: React.FC = () => {
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               <span>Calculating Route & Gate Closures...</span>
             </div>
+          ) : !destination ? (
+            <>
+              <Search className="w-4 h-4" />
+              <span>Search Destination to Find Route</span>
+            </>
           ) : (
             <>
               <Search className="w-4 h-4" />
@@ -426,4 +410,3 @@ export const RouteControls: React.FC = () => {
     </div>
   );
 };
-

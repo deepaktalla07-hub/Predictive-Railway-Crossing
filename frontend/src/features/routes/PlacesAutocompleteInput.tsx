@@ -5,7 +5,7 @@ import { MapPin, Navigation, Search, X, Loader2 } from 'lucide-react';
 
 interface PlacesAutocompleteInputProps {
   value: string;
-  coordinate: Coordinate;
+  coordinate?: Coordinate | null;
   onChange: (coord: Coordinate, label: string) => void;
   placeholder: string;
   iconType: 'origin' | 'destination';
@@ -63,7 +63,7 @@ export const PlacesAutocompleteInput: React.FC<PlacesAutocompleteInputProps> = (
     setIsLoading(true);
     searchTimeoutRef.current = window.setTimeout(async () => {
       try {
-        const results = await defaultPlacesProvider.search(query, coordinate);
+        const results = await defaultPlacesProvider.search(query, coordinate || undefined);
         setSuggestions(results);
         setIsOpen(results.length > 0);
         setSelectedIndex(-1);
@@ -90,12 +90,14 @@ export const PlacesAutocompleteInput: React.FC<PlacesAutocompleteInputProps> = (
       const details = await defaultPlacesProvider.getDetails(suggestion.placeId);
       if (details?.coordinate) {
         onChange(details.coordinate, suggestion.description);
-      } else {
+      } else if (coordinate) {
         onChange(coordinate, suggestion.description);
       }
     } catch (err) {
       console.warn('Error fetching place details:', err);
-      onChange(coordinate, suggestion.description);
+      if (coordinate) {
+        onChange(coordinate, suggestion.description);
+      }
     } finally {
       setIsLoading(false);
     }

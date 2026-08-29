@@ -210,8 +210,8 @@ export class LeafletMapAdapter implements IMapAdapter {
   }
 
   public setMarkers(
-    origin: Coordinate,
-    destination: Coordinate,
+    origin: Coordinate | null,
+    destination: Coordinate | null,
     crossings: CrossingRiskDetail[],
     onSelectCrossing?: (crossing: CrossingRiskDetail) => void,
     onOriginDragEnd?: (coord: Coordinate) => void,
@@ -221,47 +221,51 @@ export class LeafletMapAdapter implements IMapAdapter {
 
     this.markerLayerGroup.clearLayers();
 
-    // 1. Origin Marker (Draggable)
-    const originMarker = L.marker([origin.lat, origin.lng], {
-      icon: createOriginMarkerIcon(),
-      draggable: true,
-      title: 'Drag to change starting point'
-    });
-    originMarker.bindPopup(`
-      <div style="font-size: 11px; font-weight: bold; color: #0f172a; min-width: 140px;">
-        <span style="color: #2563eb;">📍 Origin (A)</span><br/>
-        <span style="font-size: 10px; color: #64748b;">${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}</span><br/>
-        <span style="font-size: 9px; color: #94a3b8;">(Drag pin to move)</span>
-      </div>
-    `);
-    if (onOriginDragEnd) {
-      originMarker.on('dragend', (e) => {
-        const latlng = (e.target as L.Marker).getLatLng();
-        onOriginDragEnd({ lat: latlng.lat, lng: latlng.lng });
+    // 1. Origin Marker (Draggable) - only if origin is set
+    if (origin) {
+      const originMarker = L.marker([origin.lat, origin.lng], {
+        icon: createOriginMarkerIcon(),
+        draggable: true,
+        title: 'Drag to change starting point'
       });
+      originMarker.bindPopup(`
+        <div style="font-size: 11px; font-weight: bold; color: #0f172a; min-width: 140px;">
+          <span style="color: #2563eb;">📍 Origin (A)</span><br/>
+          <span style="font-size: 10px; color: #64748b;">${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}</span><br/>
+          <span style="font-size: 9px; color: #94a3b8;">(Drag pin to move)</span>
+        </div>
+      `);
+      if (onOriginDragEnd) {
+        originMarker.on('dragend', (e) => {
+          const latlng = (e.target as L.Marker).getLatLng();
+          onOriginDragEnd({ lat: latlng.lat, lng: latlng.lng });
+        });
+      }
+      this.markerLayerGroup.addLayer(originMarker);
     }
-    this.markerLayerGroup.addLayer(originMarker);
 
-    // 2. Destination Marker (Draggable)
-    const destMarker = L.marker([destination.lat, destination.lng], {
-      icon: createDestinationMarkerIcon(),
-      draggable: true,
-      title: 'Drag to change destination'
-    });
-    destMarker.bindPopup(`
-      <div style="font-size: 11px; font-weight: bold; color: #0f172a; min-width: 140px;">
-        <span style="color: #059669;">🏁 Destination (B)</span><br/>
-        <span style="font-size: 10px; color: #64748b;">${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}</span><br/>
-        <span style="font-size: 9px; color: #94a3b8;">(Drag pin to move)</span>
-      </div>
-    `);
-    if (onDestinationDragEnd) {
-      destMarker.on('dragend', (e) => {
-        const latlng = (e.target as L.Marker).getLatLng();
-        onDestinationDragEnd({ lat: latlng.lat, lng: latlng.lng });
+    // 2. Destination Marker (Draggable) - only if destination is set
+    if (destination) {
+      const destMarker = L.marker([destination.lat, destination.lng], {
+        icon: createDestinationMarkerIcon(),
+        draggable: true,
+        title: 'Drag to change destination'
       });
+      destMarker.bindPopup(`
+        <div style="font-size: 11px; font-weight: bold; color: #0f172a; min-width: 140px;">
+          <span style="color: #059669;">🏁 Destination (B)</span><br/>
+          <span style="font-size: 10px; color: #64748b;">${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}</span><br/>
+          <span style="font-size: 9px; color: #94a3b8;">(Drag pin to move)</span>
+        </div>
+      `);
+      if (onDestinationDragEnd) {
+        destMarker.on('dragend', (e) => {
+          const latlng = (e.target as L.Marker).getLatLng();
+          onDestinationDragEnd({ lat: latlng.lat, lng: latlng.lng });
+        });
+      }
+      this.markerLayerGroup.addLayer(destMarker);
     }
-    this.markerLayerGroup.addLayer(destMarker);
 
     // 3. Level Crossing Markers
     crossings.forEach((c) => {

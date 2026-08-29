@@ -175,8 +175,8 @@ export class GoogleMapsAdapter implements IMapAdapter {
   }
 
   public setMarkers(
-    origin: Coordinate,
-    destination: Coordinate,
+    origin: Coordinate | null,
+    destination: Coordinate | null,
     crossings: CrossingRiskDetail[],
     onSelectCrossing?: (crossing: CrossingRiskDetail) => void
   ): void {
@@ -187,38 +187,42 @@ export class GoogleMapsAdapter implements IMapAdapter {
     this.markers = [];
 
     // 1. Origin Marker
-    const originMarker = new google.maps.Marker({
-      position: { lat: origin.lat, lng: origin.lng },
-      map: this.map,
-      title: 'Origin (A)',
-      label: { text: 'A', color: '#ffffff', fontWeight: 'bold', fontSize: '12px' },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 14,
-        fillColor: '#2563eb',
-        fillOpacity: 1,
-        strokeWeight: 2,
-        strokeColor: '#ffffff'
-      }
-    });
-    this.markers.push(originMarker);
+    if (origin) {
+      const originMarker = new google.maps.Marker({
+        position: { lat: origin.lat, lng: origin.lng },
+        map: this.map,
+        title: 'Origin (A)',
+        label: { text: 'A', color: '#ffffff', fontWeight: 'bold', fontSize: '12px' },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 14,
+          fillColor: '#2563eb',
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: '#ffffff'
+        }
+      });
+      this.markers.push(originMarker);
+    }
 
     // 2. Destination Marker
-    const destMarker = new google.maps.Marker({
-      position: { lat: destination.lat, lng: destination.lng },
-      map: this.map,
-      title: 'Destination (B)',
-      label: { text: 'B', color: '#ffffff', fontWeight: 'bold', fontSize: '12px' },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 14,
-        fillColor: '#059669',
-        fillOpacity: 1,
-        strokeWeight: 2,
-        strokeColor: '#ffffff'
-      }
-    });
-    this.markers.push(destMarker);
+    if (destination) {
+      const destMarker = new google.maps.Marker({
+        position: { lat: destination.lat, lng: destination.lng },
+        map: this.map,
+        title: 'Destination (B)',
+        label: { text: 'B', color: '#ffffff', fontWeight: 'bold', fontSize: '12px' },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 14,
+          fillColor: '#059669',
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: '#ffffff'
+        }
+      });
+      this.markers.push(destMarker);
+    }
 
     // 3. Level Crossing Markers
     crossings.forEach((c) => {

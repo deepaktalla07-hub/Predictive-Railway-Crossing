@@ -17,12 +17,20 @@ export function useRouteAnalysis() {
 
   const mutation = useMutation({
     mutationFn: async (overrideParams?: Partial<RouteAnalysisRequest>) => {
+      const targetOrigin = overrideParams?.origin || origin;
+      const targetDestination = overrideParams?.destination || destination;
+
+      if (!targetOrigin || !targetDestination) {
+        throw new Error('Please specify both a starting point and destination to find a route.');
+      }
+
       const departureTime =
-        departureMode === 'NOW' ? new Date().toISOString() : customDepartureTime;
+        overrideParams?.departureTime ||
+        (departureMode === 'NOW' ? new Date().toISOString() : customDepartureTime);
 
       const request: RouteAnalysisRequest = {
-        origin,
-        destination,
+        origin: targetOrigin,
+        destination: targetDestination,
         departureTime,
         avoidHighRiskGates,
         crossingBufferMeters: 80,

@@ -1,16 +1,30 @@
 import React, { useEffect } from 'react';
 import { Header } from './components/layout/Header';
 import { HomePage } from './pages/HomePage';
-import { useRouteAnalysis } from './hooks/useRouteAnalysis';
+import { useAppStore } from './store/useAppStore';
 
 export const App: React.FC = () => {
-  const { analyze } = useRouteAnalysis();
+  const { setOrigin } = useAppStore();
 
-  // Run initial route analysis once on mount
+  // Detect real phone/device GPS location on initial load
   useEffect(() => {
-    analyze();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setOrigin(
+            { lat: pos.coords.latitude, lng: pos.coords.longitude },
+            'Your Current Location'
+          );
+        },
+        (err) => {
+          console.warn('Geolocation initial query notice:', err.message);
+          // Fallback to default urban center if permission denied/pending
+          setOrigin({ lat: 12.9177, lng: 77.6238 }, 'Your Location');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  }, [setOrigin]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden select-none font-sans">

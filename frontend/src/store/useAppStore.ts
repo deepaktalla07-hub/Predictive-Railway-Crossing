@@ -9,8 +9,8 @@ import { ActiveTab } from '../types';
 
 interface AppState {
   // Navigation & Route Inputs
-  origin: Coordinate;
-  destination: Coordinate;
+  origin: Coordinate | null;
+  destination: Coordinate | null;
   originLabel: string;
   destinationLabel: string;
   departureMode: 'NOW' | 'CUSTOM';
@@ -45,8 +45,8 @@ interface AppState {
   distanceToNextCrossingMeters: number | null;
 
   // Actions
-  setOrigin: (coord: Coordinate, label?: string) => void;
-  setDestination: (coord: Coordinate, label?: string) => void;
+  setOrigin: (coord: Coordinate | null, label?: string) => void;
+  setDestination: (coord: Coordinate | null, label?: string) => void;
   setDepartureMode: (mode: 'NOW' | 'CUSTOM') => void;
   setCustomDepartureTime: (iso: string) => void;
   setAvoidHighRiskGates: (avoid: boolean) => void;
@@ -75,11 +75,11 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  // Default: Bangalore (Silk Board) to Hosur (via LC-88A)
-  origin: { lat: 12.9177, lng: 77.6238 },
-  destination: { lat: 12.7409, lng: 77.8253 },
-  originLabel: 'Silk Board Junction, Bengaluru',
-  destinationLabel: 'Hosur Town Center',
+  // Default: Phone GPS as origin, Empty destination
+  origin: null,
+  destination: null,
+  originLabel: 'Current Location',
+  destinationLabel: '',
   departureMode: 'NOW',
   customDepartureTime: new Date().toISOString(),
   avoidHighRiskGates: true,
@@ -109,11 +109,24 @@ export const useAppStore = create<AppState>((set) => ({
   distanceToNextCrossingMeters: null,
 
   setOrigin: (coord, label) =>
-    set({ origin: coord, originLabel: label || `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}` }),
+    set({
+      origin: coord,
+      originLabel:
+        label !== undefined
+          ? label
+          : coord
+          ? `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}`
+          : 'Current Location'
+    }),
   setDestination: (coord, label) =>
     set({
       destination: coord,
-      destinationLabel: label || `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}`
+      destinationLabel:
+        label !== undefined
+          ? label
+          : coord
+          ? `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}`
+          : ''
     }),
   setDepartureMode: (mode) => set({ departureMode: mode }),
   setCustomDepartureTime: (iso) => set({ customDepartureTime: iso }),

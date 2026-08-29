@@ -73,8 +73,8 @@ export const MapView: React.FC = () => {
 
     adapter
       .initialize(containerRef.current, {
-        center: origin,
-        zoom: 12,
+        center: origin || userLocation || { lat: 12.9177, lng: 77.6238 },
+        zoom: 13,
         onMapClick: (coord: Coordinate) => {
           setClickedCoord(coord);
         },
@@ -106,6 +106,13 @@ export const MapView: React.FC = () => {
     }
   }, [userLocation]);
 
+  // Auto-center on user GPS origin when detected and destination is empty
+  useEffect(() => {
+    if (origin && !destination && adapterRef.current) {
+      adapterRef.current.setCenter(origin, 14);
+    }
+  }, [origin, destination]);
+
   // Update Routes and Markers
   useEffect(() => {
     const adapter = adapterRef.current;
@@ -124,11 +131,15 @@ export const MapView: React.FC = () => {
       },
       (newOrigin) => {
         setOrigin(newOrigin, `${newOrigin.lat.toFixed(4)}, ${newOrigin.lng.toFixed(4)}`);
-        analyze({ origin: newOrigin });
+        if (destination) {
+          analyze({ origin: newOrigin, destination });
+        }
       },
       (newDest) => {
         setDestination(newDest, `${newDest.lat.toFixed(4)}, ${newDest.lng.toFixed(4)}`);
-        analyze({ destination: newDest });
+        if (origin) {
+          analyze({ origin, destination: newDest });
+        }
       }
     );
 
@@ -148,7 +159,9 @@ export const MapView: React.FC = () => {
       adapter.drawRoutes(primaryCoords, altCoords);
 
       // Only auto-fit bounds when a brand new route calculation request is received
-      const currentReqId = analysisResult.requestId || `${origin.lat},${origin.lng}-${destination.lat},${destination.lng}`;
+      const currentReqId =
+        analysisResult.requestId ||
+        `${origin?.lat || 0},${origin?.lng || 0}-${destination?.lat || 0},${destination?.lng || 0}`;
       if (lastFittedRequestIdRef.current !== currentReqId) {
         lastFittedRequestIdRef.current = currentReqId;
         const allCoords = primaryCoords.map(([lat, lng]) => ({ lat, lng }));
@@ -184,8 +197,10 @@ export const MapView: React.FC = () => {
           ([lng, lat]) => ({ lat, lng })
         );
         adapterRef.current.fitBounds(primaryCoords, 60);
-      } else {
+      } else if (origin && destination) {
         adapterRef.current.fitBounds([origin, destination], 60);
+      } else if (origin) {
+        adapterRef.current.setCenter(origin, 14);
       }
     }
   };
