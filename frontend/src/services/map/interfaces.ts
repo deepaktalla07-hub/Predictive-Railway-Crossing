@@ -30,6 +30,7 @@ export interface IMapAdapter {
   fitBounds(coords: Coordinate[], padding?: number): void;
   zoomIn(): void;
   zoomOut(): void;
+  pan(dx: number, dy: number): void;
   setBaseLayer(layer: MapBaseLayerType): void;
   toggleRailwayOverlay(enabled: boolean): void;
   drawRoutes(primaryCoords: [number, number][], alternativeCoords?: [number, number][]): void;

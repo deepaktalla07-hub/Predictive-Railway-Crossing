@@ -17,7 +17,11 @@ import {
   Globe,
   Moon,
   Map as MapIcon,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 export const MapView: React.FC = () => {
@@ -77,6 +81,8 @@ export const MapView: React.FC = () => {
     };
   }, []);
 
+  const lastFittedRequestIdRef = useRef<string | null>(null);
+
   // Sync user GPS location if requested
   useEffect(() => {
     if (userLocation && adapterRef.current) {
@@ -84,7 +90,7 @@ export const MapView: React.FC = () => {
     }
   }, [userLocation]);
 
-  // Update Routes and Markers whenever analysisResult, origin, destination change
+  // Update Routes and Markers
   useEffect(() => {
     const adapter = adapterRef.current;
     if (!adapter) return;
@@ -125,14 +131,16 @@ export const MapView: React.FC = () => {
 
       adapter.drawRoutes(primaryCoords, altCoords);
 
-      // Fit bounds to the active route
-      const allCoords = primaryCoords.map(([lat, lng]) => ({ lat, lng }));
-      if (altCoords) {
-        altCoords.forEach(([lat, lng]) => allCoords.push({ lat, lng }));
+      // Only auto-fit bounds when a brand new route calculation request is received
+      const currentReqId = analysisResult.requestId || `${origin.lat},${origin.lng}-${destination.lat},${destination.lng}`;
+      if (lastFittedRequestIdRef.current !== currentReqId) {
+        lastFittedRequestIdRef.current = currentReqId;
+        const allCoords = primaryCoords.map(([lat, lng]) => ({ lat, lng }));
+        if (altCoords) {
+          altCoords.forEach(([lat, lng]) => allCoords.push({ lat, lng }));
+        }
+        adapter.fitBounds(allCoords, 70);
       }
-      adapter.fitBounds(allCoords, 70);
-    } else {
-      adapter.fitBounds([origin, destination], 80);
     }
   }, [origin, destination, analysisResult, selectedAlternativeId, setSelectedCrossing, setActiveTab, setOrigin, setDestination, analyze]);
 
@@ -192,6 +200,28 @@ export const MapView: React.FC = () => {
       <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
         {/* Layer Switcher & Tool Group */}
         <div className="flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden divide-y divide-slate-800 text-slate-300">
+          {/* Pan Left Button */}
+          <button
+            type="button"
+            onClick={() => adapterRef.current?.pan(-150, 0)}
+            title="Pan Left (Move Sideways)"
+            aria-label="Pan Left"
+            className="w-10 h-10 flex items-center justify-center hover:bg-slate-800 hover:text-cyan-400 transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Pan Right Button */}
+          <button
+            type="button"
+            onClick={() => adapterRef.current?.pan(150, 0)}
+            title="Pan Right (Move Sideways)"
+            aria-label="Pan Right"
+            className="w-10 h-10 flex items-center justify-center hover:bg-slate-800 hover:text-cyan-400 transition-colors cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
           {/* Zoom In Button */}
           <button
             type="button"

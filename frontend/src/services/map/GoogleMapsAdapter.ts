@@ -117,6 +117,12 @@ export class GoogleMapsAdapter implements IMapAdapter {
     }
   }
 
+  public pan(dx: number, dy: number): void {
+    if (this.map) {
+      this.map.panBy(dx, dy);
+    }
+  }
+
   public setBaseLayer(layerType: 'streets' | 'satellite' | 'dark'): void {
     if (!this.map) return;
     if (layerType === 'satellite') {

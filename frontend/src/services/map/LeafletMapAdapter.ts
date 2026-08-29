@@ -48,7 +48,25 @@ export class LeafletMapAdapter implements IMapAdapter {
       center: [options.center.lat, options.center.lng],
       zoom: options.zoom,
       zoomControl: false,
-      attributionControl: false
+      attributionControl: false,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
+      inertia: true,
+      inertiaDeceleration: 3000,
+      easeLinearity: 0.2
+    });
+
+    // Ensure container has grab cursor
+    container.style.cursor = 'grab';
+    this.map.on('dragstart', () => {
+      container.style.cursor = 'grabbing';
+    });
+    this.map.on('dragend', () => {
+      container.style.cursor = 'grab';
     });
 
     // Add Attribution in bottom right with compact size
@@ -81,6 +99,12 @@ export class LeafletMapAdapter implements IMapAdapter {
   public zoomOut(): void {
     if (this.map) {
       this.map.zoomOut();
+    }
+  }
+
+  public pan(dx: number, dy: number): void {
+    if (this.map) {
+      this.map.panBy([dx, dy], { animate: true, duration: 0.25 });
     }
   }
 
