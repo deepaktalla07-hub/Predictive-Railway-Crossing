@@ -11,7 +11,9 @@ import {
   Search,
   Clock,
   Navigation,
-  MapPin
+  MapPin,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 
 const SCENARIO_PRESETS: RoutePreset[] = [
@@ -57,6 +59,32 @@ const SCENARIO_PRESETS: RoutePreset[] = [
   }
 ];
 
+function toLocalDatetimeString(isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+  }
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function formatDepartureLabel(isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return 'Select time';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return `Today, ${timeStr}`;
+  if (isTomorrow) return `Tomorrow, ${timeStr}`;
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+}
+
 export const RouteControls: React.FC = () => {
   const {
     origin,
@@ -64,11 +92,13 @@ export const RouteControls: React.FC = () => {
     originLabel,
     destinationLabel,
     departureMode,
+    customDepartureTime,
     avoidHighRiskGates,
     isLoading,
     setOrigin,
     setDestination,
     setDepartureMode,
+    setCustomDepartureTime,
     setAvoidHighRiskGates
   } = useAppStore();
 
@@ -91,6 +121,47 @@ export const RouteControls: React.FC = () => {
     const tempOriginLabel = originLabel;
     setOrigin(destination, destinationLabel);
     setDestination(tempOrigin, tempOriginLabel);
+  };
+
+  const handleDepartureModeChange = (mode: 'NOW' | 'CUSTOM') => {
+    setDepartureMode(mode);
+    if (mode === 'NOW') {
+      analyze({ departureTime: new Date().toISOString() });
+    } else {
+      // Initialize custom time to current time if not already set
+      if (!customDepartureTime) {
+        setCustomDepartureTime(new Date().toISOString());
+      }
+      analyze({ departureTime: customDepartureTime || new Date().toISOString() });
+    }
+  };
+
+  const handleCustomTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val) {
+      const parsedIso = new Date(val).toISOString();
+      setCustomDepartureTime(parsedIso);
+      analyze({ departureTime: parsedIso });
+    }
+  };
+
+  const addQuickMinutes = (mins: number) => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + mins);
+    const iso = d.toISOString();
+    setDepartureMode('CUSTOM');
+    setCustomDepartureTime(iso);
+    analyze({ departureTime: iso });
+  };
+
+  const setTomorrowTime = (hour: number, minute: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(hour, minute, 0, 0);
+    const iso = d.toISOString();
+    setDepartureMode('CUSTOM');
+    setCustomDepartureTime(iso);
+    analyze({ departureTime: iso });
   };
 
   return (
@@ -196,47 +267,126 @@ export const RouteControls: React.FC = () => {
         </div>
       </div>
 
-      {/* Settings Row */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[11px]">
-        {/* Departure Mode Toggle */}
-        <div className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
+      {/* Google Maps Style Departure Time Controls */}
+      <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
+        {/* Toggle Mode Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-bold text-slate-200 text-xs">Departure Time</span>
+          </div>
+
           <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
             <button
               type="button"
-              onClick={() => setDepartureMode('NOW')}
-              className={`px-2 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+              onClick={() => handleDepartureModeChange('NOW')}
+              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
                 departureMode === 'NOW'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Live Now
+              Leave now
             </button>
             <button
               type="button"
-              onClick={() => setDepartureMode('CUSTOM')}
-              className={`px-2 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
+              onClick={() => handleDepartureModeChange('CUSTOM')}
+              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors cursor-pointer ${
                 departureMode === 'CUSTOM'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Scheduled
+              Depart at
             </button>
           </div>
         </div>
 
-        {/* Avoid High Risk Toggle */}
-        <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-300">
-          <input
-            type="checkbox"
-            checked={avoidHighRiskGates}
-            onChange={(e) => setAvoidHighRiskGates(e.target.checked)}
-            className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0 w-3.5 h-3.5"
-          />
-          <span className="font-medium text-[11px]">Auto Avoid Gates</span>
-        </label>
+        {/* Custom "Depart at" / "Leave at" Scheduled Panel */}
+        {departureMode === 'CUSTOM' && (
+          <div className="flex flex-col gap-2 p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-1 duration-200">
+            {/* Native Date-Time Picker Input */}
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <div className="flex-1 relative">
+                <input
+                  type="datetime-local"
+                  value={toLocalDatetimeString(customDepartureTime || new Date().toISOString())}
+                  onChange={handleCustomTimeChange}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-cyan-500 [color-scheme:dark] cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Quick Time Shift Presets */}
+            <div className="flex flex-wrap items-center gap-1 pt-1">
+              <span className="text-[10px] font-semibold text-slate-400 mr-0.5">Quick:</span>
+              <button
+                type="button"
+                onClick={() => addQuickMinutes(15)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
+              >
+                +15m
+              </button>
+              <button
+                type="button"
+                onClick={() => addQuickMinutes(30)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
+              >
+                +30m
+              </button>
+              <button
+                type="button"
+                onClick={() => addQuickMinutes(60)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
+              >
+                +1h
+              </button>
+              <button
+                type="button"
+                onClick={() => addQuickMinutes(120)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-medium border border-slate-700 transition-colors cursor-pointer"
+              >
+                +2h
+              </button>
+              <button
+                type="button"
+                onClick={() => setTomorrowTime(9, 0)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 rounded text-[10px] font-medium border border-cyan-900/50 transition-colors cursor-pointer"
+              >
+                Tmrw 9 AM
+              </button>
+              <button
+                type="button"
+                onClick={() => setTomorrowTime(17, 0)}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 rounded text-[10px] font-medium border border-cyan-900/50 transition-colors cursor-pointer"
+              >
+                Tmrw 5 PM
+              </button>
+            </div>
+
+            {/* Formatted Schedule Summary */}
+            <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-900/60 px-2 py-1 rounded border border-slate-800/60">
+              <span>Predicting closures for:</span>
+              <span className="font-bold text-cyan-300">
+                {formatDepartureLabel(customDepartureTime || new Date().toISOString())}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Avoid High Risk Gates Option */}
+        <div className="flex items-center justify-between pt-1">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-300">
+            <input
+              type="checkbox"
+              checked={avoidHighRiskGates}
+              onChange={(e) => setAvoidHighRiskGates(e.target.checked)}
+              className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className="font-medium text-[11px]">Auto Avoid Closed / High-Risk Gates</span>
+          </label>
+        </div>
       </div>
 
       {/* Find Route Action Button */}
@@ -261,3 +411,4 @@ export const RouteControls: React.FC = () => {
     </div>
   );
 };
+
