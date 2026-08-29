@@ -15,25 +15,25 @@ export const RealtimeSyncBar: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      {/* Prediction Change Alert Banner */}
+      {/* Prediction Change Alert Announcement Banner (Solid Opaque) */}
       {predictionChangeNotice && (
-        <div className="p-3 bg-blue-600/20 border border-blue-500/50 rounded-2xl flex items-center justify-between text-blue-200 text-xs shadow-lg animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-blue-400 shrink-0 animate-bounce" />
-            <span className="font-semibold">{predictionChangeNotice}</span>
+        <div className="p-3.5 bg-blue-950 border-2 border-blue-500 rounded-2xl flex items-center justify-between text-blue-100 text-xs shadow-2xl animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2.5">
+            <Bell className="w-4 h-4 text-cyan-400 shrink-0 animate-bounce" />
+            <span className="font-bold">{predictionChangeNotice}</span>
           </div>
           <button
             type="button"
             onClick={clearChangeNotice}
-            className="px-2 py-0.5 bg-blue-600/40 hover:bg-blue-600 text-white rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black transition-colors cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Main Status & Freshness Bar */}
-      <div className="flex items-center justify-between px-3.5 py-2 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-800 text-[11px] text-slate-300">
+      {/* Main Status & Freshness Announcement Bar (Solid Opaque) */}
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900 rounded-xl border-2 border-slate-800 text-[11px] text-slate-200 shadow-xl">
         <div className="flex items-center gap-2">
           <div className="relative flex items-center justify-center">
             <span

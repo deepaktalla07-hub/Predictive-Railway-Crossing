@@ -53,11 +53,11 @@ export const HomePage: React.FC = () => {
       {/* Floating System Provenance Status Pill (Top Center Desktop) - Hidden during Navigation */}
       {!isNavigating && (
         <div className="hidden lg:flex absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="px-3.5 py-1.5 bg-slate-900/90 backdrop-blur-md rounded-full border border-slate-800 shadow-xl flex items-center gap-2 text-xs text-slate-300 pointer-events-auto">
+          <div className="px-4 py-2 bg-slate-900 rounded-full border-2 border-slate-700 shadow-2xl flex items-center gap-2 text-xs text-slate-200 pointer-events-auto">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-semibold text-slate-200">OSM & Train Telemetry Network</span>
+            <span className="font-bold text-slate-100">OSM & Train Telemetry Network</span>
             <span className="text-slate-500">•</span>
-            <span className="text-[11px] text-slate-400">Strict Provenance Active</span>
+            <span className="text-[11px] text-slate-300">Strict Provenance Active</span>
           </div>
         </div>
       )}

@@ -265,25 +265,25 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-3 sm:p-4 font-sans select-none">
-      {/* 1. TOP TURN-BY-TURN & RAILWAY CROSSING ALERT BANNER (Google Maps Style) */}
+      {/* 1. TOP TURN-BY-TURN & RAILWAY CROSSING ALERT BANNER (Google Maps Style - 100% Opaque) */}
       <div className="w-full max-w-lg mx-auto pointer-events-auto flex flex-col gap-2 animate-in slide-in-from-top-4 duration-300">
-        {/* Next Maneuver / Destination Target Card */}
-        <div className="bg-slate-900/98 backdrop-blur-2xl border border-slate-700/80 rounded-2xl shadow-2xl p-3.5 flex items-center justify-between text-white">
+        {/* Next Maneuver / Directions Bar (Solid Opaque) */}
+        <div className="bg-slate-950 border-2 border-slate-700 rounded-2xl shadow-2xl p-4 flex items-center justify-between text-white">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/40 flex-shrink-0">
               <Navigation
-                className="w-6 h-6 text-white transform transition-transform"
+                className="w-7 h-7 text-white transform transition-transform"
                 style={{ transform: `rotate(${currentHeading}deg)` }}
               />
             </div>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                <span className="text-[11px] font-black text-cyan-400 uppercase tracking-wider">
                   {hasReachedDestination ? 'Arrived at Destination' : 'Head towards'}
                 </span>
               </div>
-              <h2 className="text-sm sm:text-base font-extrabold text-white truncate max-w-[240px] sm:max-w-[280px]">
+              <h2 className="text-base sm:text-lg font-black text-white truncate max-w-[240px] sm:max-w-[280px]">
                 {hasReachedDestination ? destinationLabel : activeRoute?.summary || destinationLabel}
               </h2>
             </div>
@@ -294,26 +294,26 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
             type="button"
             onClick={() => setIsMuted(!isMuted)}
             title={isMuted ? 'Unmute Audio' : 'Mute Voice Alerts'}
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
           </button>
         </div>
 
-        {/* Dynamic Railway Crossing HUD Warning (if crossing ahead) */}
+        {/* Dynamic Railway Crossing Alert / Announcement Bar (Solid Opaque) */}
         {nextCrossing && distToNextCrossing !== null && !hasReachedDestination && (
           <div
-            className={`p-3 rounded-2xl border shadow-xl flex items-center justify-between transition-all duration-300 ${
+            className={`p-3.5 rounded-2xl border-2 shadow-2xl flex items-center justify-between transition-all duration-300 ${
               isNextGateHighRisk
-                ? 'bg-rose-950/90 border-rose-500/80 text-rose-100 shadow-rose-950/50'
+                ? 'bg-rose-950 border-rose-500 text-rose-100 shadow-rose-950/80'
                 : isNextGateModerate
-                ? 'bg-amber-950/90 border-amber-500/80 text-amber-100 shadow-amber-950/50'
-                : 'bg-emerald-950/90 border-emerald-500/80 text-emerald-100 shadow-emerald-950/50'
+                ? 'bg-amber-950 border-amber-500 text-amber-100 shadow-amber-950/80'
+                : 'bg-emerald-950 border-emerald-500 text-emerald-100 shadow-emerald-950/80'
             }`}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   isNextGateHighRisk
                     ? 'bg-rose-600 text-white animate-pulse'
                     : isNextGateModerate
@@ -325,11 +325,11 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
               </div>
 
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                <div className="flex items-center gap-1.5 text-xs font-bold">
                   <span>Upcoming Gate: {nextCrossing.name}</span>
-                  <span className="text-[10px] opacity-80">({nextCrossing.crossingCode})</span>
+                  <span className="text-[11px] opacity-90">({nextCrossing.crossingCode})</span>
                 </div>
-                <span className="text-xs font-extrabold">
+                <span className="text-sm font-black">
                   {distToNextCrossing < 100
                     ? 'Crossing tracks now!'
                     : `In ${formatDistance(distToNextCrossing)} • ${nextCrossing.riskEvaluation.riskLevel} RISK`}
@@ -339,7 +339,7 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
 
             <div className="text-right flex flex-col items-end">
               <span
-                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
+                className={`text-[11px] font-black px-2.5 py-1 rounded-full uppercase ${
                   isNextGateHighRisk
                     ? 'bg-rose-500 text-white'
                     : isNextGateModerate
@@ -354,27 +354,27 @@ export const LiveNavigationOverlay: React.FC<LiveNavigationOverlayProps> = ({
         )}
       </div>
 
-      {/* 2. BOTTOM LIVE NAVIGATION CONTROL BAR (Google Maps Style) */}
+      {/* 2. BOTTOM LIVE NAVIGATION CONTROL BAR (Google Maps Style - 100% Opaque) */}
       <div className="w-full max-w-lg mx-auto pointer-events-auto flex flex-col gap-2 animate-in slide-in-from-bottom-4 duration-300">
-        {/* Destination Reached Banner */}
+        {/* Destination Reached Announcement Banner (Solid Opaque) */}
         {hasReachedDestination && (
-          <div className="p-3.5 bg-emerald-600 border border-emerald-400 rounded-2xl shadow-2xl flex items-center justify-between text-white animate-bounce">
-            <div className="flex items-center gap-2 font-bold text-sm">
+          <div className="p-4 bg-emerald-600 border-2 border-emerald-300 rounded-2xl shadow-2xl flex items-center justify-between text-white animate-bounce">
+            <div className="flex items-center gap-2 font-black text-sm">
               <CheckCircle className="w-5 h-5" />
               <span>You have arrived at your destination!</span>
             </div>
             <button
               type="button"
               onClick={stopNavigation}
-              className="px-3 py-1 bg-white text-emerald-900 rounded-xl font-extrabold text-xs cursor-pointer shadow"
+              className="px-3.5 py-1.5 bg-white text-emerald-900 rounded-xl font-black text-xs cursor-pointer shadow"
             >
               Finish
             </button>
           </div>
         )}
 
-        {/* Main Drive HUD Card */}
-        <div className="bg-slate-900/98 backdrop-blur-2xl border border-slate-700/80 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 text-white">
+        {/* Main Drive HUD Card (Solid Opaque) */}
+        <div className="bg-slate-950 border-2 border-slate-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 text-white">
           {/* Main ETA & Metrics Row */}
           <div className="flex items-center justify-between">
             {/* ETA & Remaining Time */}
