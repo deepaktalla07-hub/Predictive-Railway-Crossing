@@ -103,6 +103,33 @@ export class GoogleMapsAdapter implements IMapAdapter {
     this.map.fitBounds(bounds, padding);
   }
 
+  public zoomIn(): void {
+    if (this.map) {
+      const z = this.map.getZoom() || 12;
+      this.map.setZoom(z + 1);
+    }
+  }
+
+  public zoomOut(): void {
+    if (this.map) {
+      const z = this.map.getZoom() || 12;
+      this.map.setZoom(z - 1);
+    }
+  }
+
+  public setBaseLayer(layerType: 'streets' | 'satellite' | 'dark'): void {
+    if (!this.map) return;
+    if (layerType === 'satellite') {
+      this.map.setMapTypeId(google.maps.MapTypeId.HYBRID);
+    } else {
+      this.map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+    }
+  }
+
+  public toggleRailwayOverlay(_enabled: boolean): void {
+    // Google Maps transit layer
+  }
+
   public drawRoutes(
     primaryCoords: [number, number][],
     alternativeCoords?: [number, number][]

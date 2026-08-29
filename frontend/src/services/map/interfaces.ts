@@ -21,17 +21,25 @@ export interface MapInitOptions {
   onCrossingClick?: (crossing: CrossingRiskDetail) => void;
 }
 
+export type MapBaseLayerType = 'streets' | 'satellite' | 'dark';
+
 export interface IMapAdapter {
   readonly providerName: string;
   initialize(container: HTMLElement, options: MapInitOptions): Promise<void>;
   setCenter(coord: Coordinate, zoom?: number): void;
   fitBounds(coords: Coordinate[], padding?: number): void;
+  zoomIn(): void;
+  zoomOut(): void;
+  setBaseLayer(layer: MapBaseLayerType): void;
+  toggleRailwayOverlay(enabled: boolean): void;
   drawRoutes(primaryCoords: [number, number][], alternativeCoords?: [number, number][]): void;
   setMarkers(
     origin: Coordinate,
     destination: Coordinate,
     crossings: CrossingRiskDetail[],
-    onSelectCrossing?: (crossing: CrossingRiskDetail) => void
+    onSelectCrossing?: (crossing: CrossingRiskDetail) => void,
+    onOriginDragEnd?: (coord: Coordinate) => void,
+    onDestinationDragEnd?: (coord: Coordinate) => void
   ): void;
   destroy(): void;
 }
