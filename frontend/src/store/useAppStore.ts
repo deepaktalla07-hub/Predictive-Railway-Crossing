@@ -26,7 +26,8 @@ interface AppState {
   selectedCrossing: CrossingRiskDetail | null;
   activeTab: ActiveTab;
 
-  // Modals
+  // Modals & Interactive Map Modes
+  mapPickingMode: 'origin' | 'destination' | null;
   isReportModalOpen: boolean;
   isProvenanceModalOpen: boolean;
   isSourcesModalOpen: boolean;
@@ -47,6 +48,7 @@ interface AppState {
   // Actions
   setOrigin: (coord: Coordinate | null, label?: string) => void;
   setDestination: (coord: Coordinate | null, label?: string) => void;
+  setMapPickingMode: (mode: 'origin' | 'destination' | null) => void;
   setDepartureMode: (mode: 'NOW' | 'CUSTOM') => void;
   setCustomDepartureTime: (iso: string) => void;
   setAvoidHighRiskGates: (avoid: boolean) => void;
@@ -91,6 +93,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectedCrossing: null,
   activeTab: 'route',
 
+  mapPickingMode: null,
   isReportModalOpen: false,
   isProvenanceModalOpen: false,
   isSourcesModalOpen: false,
@@ -128,6 +131,7 @@ export const useAppStore = create<AppState>((set) => ({
           ? `${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)}`
           : ''
     }),
+  setMapPickingMode: (mode) => set({ mapPickingMode: mode }),
   setDepartureMode: (mode) => set({ departureMode: mode }),
   setCustomDepartureTime: (iso) => set({ customDepartureTime: iso }),
   setAvoidHighRiskGates: (avoid) => set({ avoidHighRiskGates: avoid }),

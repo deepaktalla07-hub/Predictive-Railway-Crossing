@@ -146,7 +146,7 @@ export const PlacesAutocompleteInput: React.FC<PlacesAutocompleteInputProps> = (
           placeholder={placeholder}
           aria-label={ariaLabel || placeholder}
           className={`w-full pl-9 ${
-            rightElement ? 'pr-16' : 'pr-8'
+            rightElement ? 'pr-20' : 'pr-8'
           } py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs font-semibold text-white placeholder-slate-500 focus:outline-none transition-all shadow-inner ${
             iconType === 'origin'
               ? 'focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'

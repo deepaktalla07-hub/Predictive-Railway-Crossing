@@ -106,4 +106,22 @@ export class GooglePlacesProvider implements IPlacesProvider {
       return null;
     }
   }
+
+  public async reverseGeocode(coord: Coordinate): Promise<string> {
+    try {
+      await this.ensureInitialized();
+      const geocoder = new google.maps.Geocoder();
+      return new Promise((resolve) => {
+        geocoder.geocode({ location: coord }, (results, status) => {
+          if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+            resolve(results[0].formatted_address);
+          } else {
+            resolve(`Selected Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`);
+          }
+        });
+      });
+    } catch {
+      return `Selected Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+    }
+  }
 }

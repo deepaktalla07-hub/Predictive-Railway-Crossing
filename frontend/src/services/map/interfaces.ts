@@ -51,6 +51,7 @@ export interface IPlacesProvider {
   readonly providerName: string;
   search(query: string, locationBias?: Coordinate): Promise<PlaceSuggestion[]>;
   getDetails(placeId: string): Promise<PlaceDetails | null>;
+  reverseGeocode?(coord: Coordinate): Promise<string>;
 }
 
 export interface IRoutingProvider {

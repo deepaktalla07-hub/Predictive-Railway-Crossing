@@ -95,4 +95,37 @@ export class NominatimPlacesProvider implements IPlacesProvider {
       return null;
     }
   }
+
+  public async reverseGeocode(coord: Coordinate): Promise<string> {
+    try {
+      const url = `${this.baseUrl}/reverse?format=json&lat=${coord.lat}&lon=${coord.lng}&zoom=18&addressdetails=1`;
+      const response = await axios.get(url, {
+        headers: {
+          'Accept-Language': 'en'
+        },
+        timeout: 4500
+      });
+
+      if (response.data) {
+        if (response.data.name && response.data.address) {
+          const suburb = response.data.address.suburb || response.data.address.neighbourhood || response.data.address.city || response.data.address.town || '';
+          if (suburb && !response.data.name.includes(suburb)) {
+            return `${response.data.name}, ${suburb}`;
+          }
+          return response.data.name;
+        }
+        if (response.data.display_name) {
+          const parts = response.data.display_name.split(',').map((s: string) => s.trim());
+          if (parts.length >= 2) {
+            return `${parts[0]}, ${parts[1]}`;
+          }
+          return response.data.display_name;
+        }
+      }
+      return `Selected Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+    } catch {
+      return `Selected Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+    }
+  }
 }
+

@@ -25,6 +25,14 @@ export class CompositePlacesProvider implements IPlacesProvider {
   public async getDetails(placeId: string): Promise<PlaceDetails | null> {
     return this.activeProvider.getDetails(placeId);
   }
+
+  public async reverseGeocode(coord: Coordinate): Promise<string> {
+    if (this.activeProvider.reverseGeocode) {
+      return this.activeProvider.reverseGeocode(coord);
+    }
+    return `Selected Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+  }
 }
 
 export const defaultPlacesProvider = new CompositePlacesProvider();
+

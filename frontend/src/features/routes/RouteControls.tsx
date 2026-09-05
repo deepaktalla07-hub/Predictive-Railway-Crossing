@@ -9,7 +9,9 @@ import {
   Search,
   Clock,
   Navigation,
-  Calendar
+  Calendar,
+  MapPin,
+  MousePointerClick
 } from 'lucide-react';
 
 function toLocalDatetimeString(isoDate: string): string {
@@ -44,6 +46,7 @@ export const RouteControls: React.FC = () => {
     destination,
     originLabel,
     destinationLabel,
+    mapPickingMode,
     departureMode,
     customDepartureTime,
     avoidHighRiskGates,
@@ -51,6 +54,7 @@ export const RouteControls: React.FC = () => {
     analysisResult,
     setOrigin,
     setDestination,
+    setMapPickingMode,
     setDepartureMode,
     setCustomDepartureTime,
     setAvoidHighRiskGates,
@@ -112,7 +116,7 @@ export const RouteControls: React.FC = () => {
     <div className="flex flex-col gap-3.5 p-4 bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl text-slate-200">
       {/* Places Autocomplete Input Cluster */}
       <div className="flex flex-col gap-2 relative">
-        {/* START Location with Places Autocomplete & GPS Button */}
+        {/* START Location with Places Autocomplete, GPS & Map Pick Button */}
         <PlacesAutocompleteInput
           value={originLabel}
           coordinate={origin}
@@ -121,17 +125,32 @@ export const RouteControls: React.FC = () => {
           iconType="origin"
           ariaLabel="Start Location"
           rightElement={
-            <button
-              type="button"
-              onClick={getCurrentLocation}
-              title="Use current GPS location"
-              aria-label="Use current GPS location"
-              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-            >
-              <Compass
-                className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin text-cyan-400' : ''}`}
-              />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMapPickingMode(mapPickingMode === 'origin' ? null : 'origin')}
+                title="Select START location on map"
+                aria-label="Select START location on map"
+                className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                  mapPickingMode === 'origin'
+                    ? 'bg-cyan-500/20 text-cyan-400 ring-1 ring-cyan-400 animate-pulse'
+                    : 'text-slate-400 hover:text-cyan-400'
+                }`}
+              >
+                <MousePointerClick className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                title="Use current GPS location"
+                aria-label="Use current GPS location"
+                className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
+              >
+                <Compass
+                  className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin text-cyan-400' : ''}`}
+                />
+              </button>
+            </div>
           }
         />
 
@@ -148,7 +167,7 @@ export const RouteControls: React.FC = () => {
           </button>
         </div>
 
-        {/* DESTINATION Location with Places Autocomplete */}
+        {/* DESTINATION Location with Places Autocomplete & Map Pick Button */}
         <PlacesAutocompleteInput
           value={destinationLabel}
           coordinate={destination}
@@ -161,8 +180,53 @@ export const RouteControls: React.FC = () => {
           placeholder="DESTINATION Location (Search Places)"
           iconType="destination"
           ariaLabel="Destination Location"
+          rightElement={
+            <button
+              type="button"
+              onClick={() => setMapPickingMode(mapPickingMode === 'destination' ? null : 'destination')}
+              title="Select DESTINATION location on map"
+              aria-label="Select DESTINATION location on map"
+              className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                mapPickingMode === 'destination'
+                  ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-400 animate-pulse'
+                  : 'text-slate-400 hover:text-emerald-400'
+              }`}
+            >
+              <MousePointerClick className="w-3.5 h-3.5" />
+            </button>
+          }
         />
+
+        {/* Quick Map Pin Selector Action Row */}
+        <div className="flex items-center gap-2 pt-0.5">
+          <button
+            type="button"
+            onClick={() => setMapPickingMode(mapPickingMode === 'origin' ? null : 'origin')}
+            className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+              mapPickingMode === 'origin'
+                ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-sm'
+                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-slate-700'
+            }`}
+          >
+            <MapPin className="w-3 h-3 text-cyan-400" />
+            <span>{mapPickingMode === 'origin' ? 'Click Map to Set (A)' : 'Pick Start on Map'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMapPickingMode(mapPickingMode === 'destination' ? null : 'destination')}
+            className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+              mapPickingMode === 'destination'
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
+                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-emerald-300 hover:border-slate-700'
+            }`}
+          >
+            <Navigation className="w-3 h-3 text-emerald-400" />
+            <span>{mapPickingMode === 'destination' ? 'Click Map to Set (B)' : 'Pick Dest on Map'}</span>
+          </button>
+        </div>
       </div>
+
 
       {/* Advanced Timing & Gate Avoidance Controls */}
       <div className="flex flex-col gap-2 pt-1 border-t border-slate-800/80">

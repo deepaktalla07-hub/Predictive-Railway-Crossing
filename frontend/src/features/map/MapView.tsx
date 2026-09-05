@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useRouteAnalysis } from '../../hooks/useRouteAnalysis';
 import { useGeolocation } from '../../hooks/useGeolocation';
-import { createMapAdapter, IMapAdapter, MapBaseLayerType } from '../../services/map';
+import { createMapAdapter, defaultPlacesProvider, IMapAdapter, MapBaseLayerType } from '../../services/map';
 import { Coordinate } from '@railway-gate/shared';
 import {
   Layers,
@@ -21,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  MousePointerClick,
+  Loader2
 } from 'lucide-react';
 
 export const MapView: React.FC = () => {
@@ -32,16 +34,20 @@ export const MapView: React.FC = () => {
   const [railwayOverlayActive, setRailwayOverlayActive] = useState<boolean>(true);
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState<boolean>(false);
   const [clickedCoord, setClickedCoord] = useState<Coordinate | null>(null);
+  const [clickedAddress, setClickedAddress] = useState<string | null>(null);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState<boolean>(false);
 
   const {
     origin,
     destination,
+    mapPickingMode,
     analysisResult,
     selectedAlternativeId,
     setSelectedCrossing,
     setActiveTab,
     setOrigin,
     setDestination,
+    setMapPickingMode,
     isNavigating,
     vehicleCoord,
     vehicleHeading
@@ -49,6 +55,29 @@ export const MapView: React.FC = () => {
 
   const { analyze } = useRouteAnalysis();
   const { getCurrentLocation, location: userLocation, loading: geoLoading } = useGeolocation();
+
+  // Keep a ref to the latest state and actions to avoid stale closures in map event callbacks
+  const latestStateRef = useRef({
+    mapPickingMode,
+    origin,
+    destination,
+    analyze,
+    setOrigin,
+    setDestination,
+    setMapPickingMode
+  });
+
+  useEffect(() => {
+    latestStateRef.current = {
+      mapPickingMode,
+      origin,
+      destination,
+      analyze,
+      setOrigin,
+      setDestination,
+      setMapPickingMode
+    };
+  }, [mapPickingMode, origin, destination, analyze, setOrigin, setDestination, setMapPickingMode]);
 
   // Synchronize Live Navigation Vehicle Marker & Camera Tracking
   useEffect(() => {
@@ -75,8 +104,52 @@ export const MapView: React.FC = () => {
       .initialize(containerRef.current, {
         center: origin || userLocation || { lat: 12.9177, lng: 77.6238 },
         zoom: 13,
-        onMapClick: (coord: Coordinate) => {
-          setClickedCoord(coord);
+        onMapClick: async (coord: Coordinate) => {
+          const currentPickingMode = latestStateRef.current.mapPickingMode;
+          const currentOrigin = latestStateRef.current.origin;
+          const currentDest = latestStateRef.current.destination;
+
+          if (currentPickingMode === 'origin') {
+            const fallbackLabel = `Map Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+            latestStateRef.current.setOrigin(coord, fallbackLabel);
+            latestStateRef.current.setMapPickingMode(null);
+
+            // Asynchronously reverse geocode for full address
+            defaultPlacesProvider.reverseGeocode(coord).then((addr) => {
+              if (addr) {
+                latestStateRef.current.setOrigin(coord, addr);
+              }
+            });
+
+            if (currentDest) {
+              latestStateRef.current.analyze({ origin: coord, destination: currentDest });
+            }
+          } else if (currentPickingMode === 'destination') {
+            const fallbackLabel = `Map Point (${coord.lat.toFixed(4)}, ${coord.lng.toFixed(4)})`;
+            latestStateRef.current.setDestination(coord, fallbackLabel);
+            latestStateRef.current.setMapPickingMode(null);
+
+            // Asynchronously reverse geocode for full address
+            defaultPlacesProvider.reverseGeocode(coord).then((addr) => {
+              if (addr) {
+                latestStateRef.current.setDestination(coord, addr);
+              }
+            });
+
+            if (currentOrigin) {
+              latestStateRef.current.analyze({ origin: currentOrigin, destination: coord });
+            }
+          } else {
+            setClickedCoord(coord);
+            setIsReverseGeocoding(true);
+            setClickedAddress(null);
+            defaultPlacesProvider.reverseGeocode(coord).then((addr) => {
+              setClickedAddress(addr);
+              setIsReverseGeocoding(false);
+            }).catch(() => {
+              setIsReverseGeocoding(false);
+            });
+          }
         },
         onCrossingClick: (crossing) => {
           setSelectedCrossing(crossing);
@@ -208,24 +281,60 @@ export const MapView: React.FC = () => {
   // Click-to-Route Handlers
   const handleSetStart = () => {
     if (clickedCoord) {
-      setOrigin(clickedCoord, `${clickedCoord.lat.toFixed(4)}, ${clickedCoord.lng.toFixed(4)}`);
+      const label = clickedAddress || `Map Point (${clickedCoord.lat.toFixed(4)}, ${clickedCoord.lng.toFixed(4)})`;
+      setOrigin(clickedCoord, label);
       setClickedCoord(null);
-      analyze({ origin: clickedCoord });
+      if (destination) {
+        analyze({ origin: clickedCoord, destination });
+      }
     }
   };
 
   const handleSetDestination = () => {
     if (clickedCoord) {
-      setDestination(clickedCoord, `${clickedCoord.lat.toFixed(4)}, ${clickedCoord.lng.toFixed(4)}`);
+      const label = clickedAddress || `Map Point (${clickedCoord.lat.toFixed(4)}, ${clickedCoord.lng.toFixed(4)})`;
+      setDestination(clickedCoord, label);
       setClickedCoord(null);
-      analyze({ destination: clickedCoord });
+      if (origin) {
+        analyze({ origin, destination: clickedCoord });
+      }
     }
   };
 
   return (
-    <div className="w-full h-full relative z-0 bg-slate-950 overflow-hidden select-none">
+    <div className={`w-full h-full relative z-0 bg-slate-950 overflow-hidden select-none ${mapPickingMode ? 'cursor-crosshair' : ''}`}>
       {/* Underlying Map Engine Canvas */}
       <div ref={containerRef} className="w-full h-full" />
+
+      {/* Active Map Pin Dropping Banner (Top Center) */}
+      {mapPickingMode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/98 backdrop-blur-2xl border border-cyan-500/80 px-4 py-2.5 rounded-2xl shadow-2xl shadow-cyan-900/40 flex items-center gap-3 text-xs text-white animate-in fade-in slide-in-from-top-3 duration-200 pointer-events-auto">
+          <div className="relative flex items-center justify-center">
+            <div className={`w-3 h-3 rounded-full ${mapPickingMode === 'origin' ? 'bg-cyan-400' : 'bg-emerald-400'} animate-ping`} />
+            <div className={`absolute w-2 h-2 rounded-full ${mapPickingMode === 'origin' ? 'bg-cyan-400' : 'bg-emerald-400'}`} />
+          </div>
+
+          <div className="flex flex-col">
+            <span className="font-extrabold text-slate-100 flex items-center gap-1.5">
+              <MousePointerClick className="w-3.5 h-3.5 text-cyan-400 animate-bounce" />
+              {mapPickingMode === 'origin'
+                ? 'Select START Point on Map (A)'
+                : 'Select DESTINATION Point on Map (B)'}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Click anywhere on the map to place pin
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMapPickingMode(null)}
+            className="ml-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg font-semibold text-[11px] border border-slate-700 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Floating Interactive Map Toolbar (Top Right) */}
       <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
@@ -403,22 +512,23 @@ export const MapView: React.FC = () => {
 
       {/* Clicked Map Location Action Card (Bottom Center) */}
       {clickedCoord && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/98 backdrop-blur-2xl border border-slate-700 p-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs text-slate-200 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <div className="flex flex-col">
-            <span className="font-bold text-slate-100 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-              Selected Point
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/98 backdrop-blur-2xl border border-slate-700 p-3.5 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center gap-3 text-xs text-slate-200 animate-in fade-in slide-in-from-bottom-3 duration-200 max-w-[90vw]">
+          <div className="flex flex-col min-w-0 max-w-xs">
+            <span className="font-bold text-slate-100 flex items-center gap-1.5 truncate">
+              <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+              <span className="truncate">{clickedAddress || 'Selected Point'}</span>
+              {isReverseGeocoding && <Loader2 className="w-3 h-3 text-cyan-400 animate-spin flex-shrink-0" />}
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
               {clickedCoord.lat.toFixed(4)}, {clickedCoord.lng.toFixed(4)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
               onClick={handleSetStart}
-              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-1"
             >
               <MapPin className="w-3 h-3" />
               <span>Set as Start (A)</span>
@@ -427,7 +537,7 @@ export const MapView: React.FC = () => {
             <button
               type="button"
               onClick={handleSetDestination}
-              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-1"
             >
               <Navigation className="w-3 h-3" />
               <span>Set as Dest (B)</span>
@@ -436,7 +546,7 @@ export const MapView: React.FC = () => {
             <button
               type="button"
               onClick={() => setClickedCoord(null)}
-              className="p-1 text-slate-400 hover:text-white transition-colors ml-1"
+              className="p-1 text-slate-400 hover:text-white transition-colors ml-1 cursor-pointer"
               title="Dismiss"
             >
               <X className="w-4 h-4" />
@@ -447,4 +557,5 @@ export const MapView: React.FC = () => {
     </div>
   );
 };
+
 
